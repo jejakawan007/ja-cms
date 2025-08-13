@@ -89,8 +89,28 @@ export class AuthController {
       refreshTokenOptions
     );
 
+    // Include permissions and default preferences in user object for frontend
+    const userWithExtras = {
+      ...user,
+      permissions,
+      preferences: {
+        theme: 'light',
+        language: 'en',
+        timezone: 'UTC',
+        notifications: {
+          email: true,
+          push: true,
+          desktop: true,
+        },
+        dashboard: {
+          layout: 'grid',
+          widgets: ['stats', 'recent-posts', 'recent-activity'],
+        },
+      },
+    };
+
     const response: LoginResponse = {
-      user,
+      user: userWithExtras,
       token,
       refreshToken,
     };
@@ -133,10 +153,65 @@ export class AuthController {
     // Create user
     const user = await this.authService.createUser(userData);
 
+    // Auto-login user after registration
+    const config = getAuthConfig();
+    const permissions = getRolePermissions(user.role);
+    
+    // Generate tokens for the new user
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const tokenOptions: SignOptions = { expiresIn: config.jwtExpiresIn as any };
+    const token = jwt.sign(
+      {
+        userId: user.id,
+        email: user.email,
+        role: user.role,
+        permissions,
+      },
+      config.jwtSecret,
+      tokenOptions
+    );
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const refreshTokenOptions: SignOptions = { expiresIn: config.refreshTokenExpiresIn as any };
+    const refreshToken = jwt.sign(
+      {
+        userId: user.id,
+        type: 'refresh',
+      },
+      config.jwtSecret,
+      refreshTokenOptions
+    );
+
+    // Include permissions and default preferences in user object for frontend
+    const userWithExtras = {
+      ...user,
+      permissions,
+      preferences: {
+        theme: 'light',
+        language: 'en',
+        timezone: 'UTC',
+        notifications: {
+          email: true,
+          push: true,
+          desktop: true,
+        },
+        dashboard: {
+          layout: 'grid',
+          widgets: ['stats', 'recent-posts', 'recent-activity'],
+        },
+      },
+    };
+
+    const response: LoginResponse = {
+      user: userWithExtras,
+      token,
+      refreshToken,
+    };
+
     res.status(201).json({
       success: true,
-      data: user,
-      message: 'User berhasil dibuat',
+      data: response,
+      message: 'User berhasil dibuat dan login otomatis',
     });
   }
 
@@ -293,9 +368,30 @@ export class AuthController {
       throw createUnauthorizedError('User tidak ditemukan');
     }
 
+    // Include permissions and default preferences in user object for frontend
+    const permissions = getRolePermissions(user.role);
+    const userWithExtras = {
+      ...user,
+      permissions,
+      preferences: {
+        theme: 'light',
+        language: 'en',
+        timezone: 'UTC',
+        notifications: {
+          email: true,
+          push: true,
+          desktop: true,
+        },
+        dashboard: {
+          layout: 'grid',
+          widgets: ['stats', 'recent-posts', 'recent-activity'],
+        },
+      },
+    };
+
     res.json({
       success: true,
-      data: user,
+      data: userWithExtras,
       message: 'User ditemukan',
     });
   }

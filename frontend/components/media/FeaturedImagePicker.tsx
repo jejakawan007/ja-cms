@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import NextImage from 'next/image';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -106,7 +107,7 @@ export function FeaturedImagePicker({
           <CardContent className="p-8">
             <div className="text-center space-y-4">
               <div className="mx-auto w-16 h-16 bg-muted rounded-full flex items-center justify-center">
-                <Image className="h-8 w-8 text-muted-foreground" />
+                <Image className="h-8 w-8 text-muted-foreground" aria-label="No image placeholder" />
               </div>
               <div className="space-y-2">
                 <h3 className="text-lg font-medium">No featured image</h3>
@@ -118,7 +119,6 @@ export function FeaturedImagePicker({
                 <MediaPicker
                   onSelect={handleImageSelect}
                   multiple={false}
-                  acceptedTypes={['image/*']}
                   trigger={
                     <Button>
                       <Upload className="h-4 w-4 mr-2" />
@@ -148,16 +148,17 @@ export function FeaturedImagePicker({
             <CardContent className="p-0">
               <div className="relative">
                 <div 
-                  className="w-full bg-muted"
+                  className="relative w-full bg-muted"
                   style={{ 
                     aspectRatio: `${aspectRatio}`,
                     maxHeight: `${maxHeight}px`
                   }}
                 >
-                  <img
+                  <NextImage
                     src={value.url}
                     alt={value.alt || value.filename}
-                    className="w-full h-full object-cover"
+                    fill
+                    className="object-cover"
                   />
                 </div>
                 

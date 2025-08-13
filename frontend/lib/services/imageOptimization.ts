@@ -44,9 +44,7 @@ export class ImageOptimizer {
       quality = 85,
       maxWidth = 1920,
       maxHeight = 1080,
-      format = 'jpeg',
-      progressive = true,
-      stripMetadata = true
+      format = 'jpeg'
     } = options;
 
     return new Promise((resolve, reject) => {

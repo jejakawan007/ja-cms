@@ -3,7 +3,7 @@
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Plus, Search } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { ViewToggle, type ViewMode } from '@/components/content/posts/ViewToggle';
 import { PostCard } from '@/components/content/posts/PostCard';
@@ -95,41 +95,42 @@ export default function PostsPage() {
     }
   }, []);
 
-  // Fetch posts from API
-  useEffect(() => {
-    const fetchPosts = async () => {
-      try {
-        setIsLoading(true);
-        setError(null);
-        
-        // Check if token exists
-        const token = localStorage.getItem('ja-cms-token');
-        if (!token) {
-          throw new Error('No authentication token found. Please login first.');
-        }
-        
-        const response = await postsApi.getPosts();
-        if (response.success && response.data) {
-          // API returns data directly as array, not wrapped in posts property
-          const postsArray = Array.isArray(response.data) ? response.data : response.data.posts || [];
-          const adaptedPosts = postsArray.map(adaptApiPostToComponentPost);
-          setPosts(adaptedPosts);
-          setFilteredPosts(adaptedPosts);
-        } else {
-          throw new Error(response.error?.message || 'Failed to fetch posts');
-        }
-      } catch (err) {
-        console.error('Error fetching posts:', err);
-        setError(err instanceof Error ? err.message : 'Failed to fetch posts');
-        setPosts([]);
-        setFilteredPosts([]);
-      } finally {
-        setIsLoading(false);
+  // Fetch posts from API - using useCallback to prevent infinite loops
+  const fetchPosts = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      // Check if token exists
+      const token = localStorage.getItem('ja-cms-token');
+      if (!token) {
+        throw new Error('No authentication token found. Please login first.');
+        return;
       }
-    };
-
-    fetchPosts();
+      
+      const response = await postsApi.getPosts();
+      if (response.success && response.data) {
+        // API returns data directly as array, not wrapped in posts property
+        const postsArray = Array.isArray(response.data) ? response.data : response.data.posts || [];
+        const adaptedPosts = postsArray.map(adaptApiPostToComponentPost);
+        setPosts(adaptedPosts);
+        setFilteredPosts(adaptedPosts);
+      } else {
+        throw new Error(response.error?.message || 'Failed to fetch posts');
+      }
+    } catch (err) {
+      console.error('Error fetching posts:', err);
+      setError(err instanceof Error ? err.message : 'Failed to fetch posts');
+      setPosts([]);
+      setFilteredPosts([]);
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchPosts();
+  }, [fetchPosts]);
 
   // Filter posts based on search term
   useEffect(() => {

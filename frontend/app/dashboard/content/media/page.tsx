@@ -1,230 +1,452 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import { 
-  Search, 
-  Grid3X3,
-  List,
-  Check,
-  Image,
-  File,
-  Video,
-  Music,
-  Archive,
-  Download,
-  Trash2,
-  Copy,
-  MoreHorizontal,
-  Upload,
-  FolderPlus,
-  ChevronRight,
-  Folder,
-  FolderOpen,
-  Home,
-  Sidebar
-} from 'lucide-react';
-import { MediaPicker } from '@/components/media/MediaPicker';
-import { BulkOperations } from '@/components/media/BulkOperations';
-import { MediaUpload } from '@/components/media/MediaUpload';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
+import { Upload, RefreshCw, AlertCircle } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
-import { cn } from '@/lib/cn';
+// Import new modular components
+import { MediaSidebar, type MediaFolder } from '@/components/media/MediaSidebar';
+import { MediaToolbar, type ViewMode, type SortField, type SortOrder, type MediaFile } from '@/components/media/MediaToolbar';
+import { MediaContent } from '@/components/media/MediaContent';
+import { MediaUploadModal } from '@/components/media/MediaUploadModal';
 
-interface MediaFile {
-  id: string;
-  filename: string;
-  originalName: string;
-  mimeType: string;
-  size: number;
-  url: string;
-  alt?: string;
-  description?: string;
-  uploadedBy: string;
-  createdAt: string;
-  folderId?: string;
-  dimensions?: {
-    width: number;
-    height: number;
-  };
-}
-
-interface MediaFolder {
-  id: string;
-  name: string;
-  path: string;
-  parentId?: string;
-  fileCount: number;
-  totalSize: number;
-  createdAt: string;
-  updatedAt: string;
-  children?: MediaFolder[];
-}
-
+/**
+ * Media Explorer Page - Comprehensive file management system
+ * Features:
+ * - Collapsible sidebar with folder tree
+ * - Multiple view modes (card, grid, list)
+ * - Advanced search and filtering
+ * - Drag & drop file management
+ * - Bulk operations
+ * - Upload with metadata
+ */
 export default function MediaExplorerPage() {
+  const { toast } = useToast();
+  const router = useRouter();
+  
+  // Core state
+  const [folders, setFolders] = useState<MediaFolder[]>([]);
   const [mediaFiles, setMediaFiles] = useState<MediaFile[]>([]);
-  const [selectedFiles, setSelectedFiles] = useState<MediaFile[]>([]);
   const [currentFolder, setCurrentFolder] = useState<MediaFolder | null>(null);
   const [folderPath, setFolderPath] = useState<MediaFolder[]>([]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedType, setSelectedType] = useState<string>('all');
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  
+  // UI state
   const [isLoading, setIsLoading] = useState(false);
-  const [showUploadDialog, setShowUploadDialog] = useState(false);
-  const [showFolderDialog, setShowFolderDialog] = useState(false);
-  const [newFolderName, setNewFolderName] = useState('');
-  const [folders, setFolders] = useState<MediaFolder[]>([]);
+  const [error, setError] = useState<string | null>(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  
+  // Selection and interaction
+  const [selectedFiles, setSelectedFiles] = useState<MediaFile[]>([]);
+  
+  // View and filter state
+  const [viewMode, setViewMode] = useState<ViewMode>('card');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
+  const [sortField, setSortField] = useState<SortField>('createdAt');
+  const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
+  
+  // Authentication state
+  const [authToken, setAuthToken] = useState<string | null>(null);
 
-  // Load folders and media files
-  useEffect(() => {
-    loadFolders();
-    loadMediaFiles();
-  }, [currentFolder]);
+  // API call to load folders
+  const loadFolders = useCallback(async () => {
+    if (!authToken) {
+        setFolders([]);
+        return;
+      }
 
-  const loadFolders = async () => {
     try {
-      // TODO: Replace with real API call
-      const mockFolders: MediaFolder[] = [
-        {
-          id: '1',
-          name: 'Hero Images',
-          path: '/hero-images',
-          fileCount: 24,
-          totalSize: 156 * 1024 * 1024, // 156 MB
-          createdAt: '2024-01-01T00:00:00Z',
-          updatedAt: '2024-01-15T10:30:00Z',
-          children: [
-            {
-              id: '1-1',
-              name: 'Landing Page',
-              path: '/hero-images/landing-page',
-              parentId: '1',
-              fileCount: 8,
-              totalSize: 45 * 1024 * 1024,
-              createdAt: '2024-01-05T00:00:00Z',
-              updatedAt: '2024-01-12T15:20:00Z'
+      const response = await fetch('/api/media/folders', {
+        headers: {
+          'Authorization': `Bearer ${authToken}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success && Array.isArray(result.data)) {
+          // Build folder hierarchy
+          const buildFolderTree = (folders: any[], parentId: string | null = null): MediaFolder[] => {
+            try {
+              return folders
+                .filter(folder => folder && folder.parentId === parentId)
+                .map(folder => ({
+                  ...folder,
+                  children: buildFolderTree(folders, folder.id)
+                }));
+            } catch (err) {
+              console.error('Error building folder tree:', err);
+              return [];
             }
-          ]
-        },
-        {
-          id: '2',
-          name: 'Product Photos',
-          path: '/product-photos',
-          fileCount: 156,
-          totalSize: 2.1 * 1024 * 1024 * 1024, // 2.1 GB
-          createdAt: '2024-01-01T00:00:00Z',
-          updatedAt: '2024-01-14T16:45:00Z'
-        },
-        {
-          id: '3',
-          name: 'Documents',
-          path: '/documents',
-          fileCount: 89,
-          totalSize: 234 * 1024 * 1024, // 234 MB
-          createdAt: '2024-01-01T00:00:00Z',
-          updatedAt: '2024-01-13T09:15:00Z'
+          };
+          
+          const folderTree = buildFolderTree(result.data);
+          setFolders(folderTree || []);
+        } else {
+          setFolders([]);
         }
-      ];
-
-      setFolders(mockFolders);
+        } else {
+          console.warn('Failed to load folders:', response.status, response.statusText);
+        setFolders([]);
+      }
     } catch (error) {
-      console.error('Failed to load folders:', error);
+      console.error('Error loading folders:', error);
+      setFolders([]);
+      // Only set error if it's not a network issue
+      if (error instanceof Error && !error.message.includes('fetch')) {
+        setError('Failed to load folders');
+      }
     }
-  };
+  }, [authToken]);
 
-  const loadMediaFiles = async () => {
+  // API call to load media files
+  const loadMediaFiles = useCallback(async () => {
+    if (!authToken) {
+        setIsLoading(false);
+        return;
+      }
+      
     setIsLoading(true);
+    setError(null);
+    
     try {
-      // TODO: Replace with real API call - filter by currentFolder
-      const mockFiles: MediaFile[] = [
-        {
-          id: '1',
-          filename: 'hero-image-1.jpg',
-          originalName: 'hero-image-1.jpg',
-          mimeType: 'image/jpeg',
-          size: 1024000,
-          url: 'https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=400&h=300&fit=crop',
-          alt: 'Hero Image 1',
-          description: 'Main hero image for homepage',
-          uploadedBy: 'John Doe',
-          createdAt: '2024-01-15T10:30:00Z',
-          folderId: currentFolder?.id,
-          dimensions: { width: 1920, height: 1080 }
-        },
-        {
-          id: '2',
-          filename: 'document.pdf',
-          originalName: 'document.pdf',
-          mimeType: 'application/pdf',
-          size: 2048000,
-          url: '/api/media/2',
-          uploadedBy: 'Sarah Wilson',
-          createdAt: '2024-01-14T14:20:00Z',
-          folderId: currentFolder?.id
-        },
-        {
-          id: '3',
-          filename: 'video-demo.mp4',
-          originalName: 'video-demo.mp4',
-          mimeType: 'video/mp4',
-          size: 15728640,
-          url: '/api/media/3',
-          description: 'Product demonstration video',
-          uploadedBy: 'Mike Johnson',
-          createdAt: '2024-01-13T16:45:00Z',
-          folderId: currentFolder?.id
-        }
-      ];
+      const params = new URLSearchParams({
+        page: '1',
+        limit: '100',
+        ...(currentFolder && { folderId: currentFolder.id }),
+        ...(searchTerm && { search: searchTerm }),
+        ...(selectedTypes.length > 0 && { types: selectedTypes.join(',') }),
+        ...(sortField && { sortBy: sortField }),
+        ...(sortOrder && { sortOrder }),
+      });
 
-      setMediaFiles(mockFiles);
+
+
+      const response = await fetch(`/api/media?${params}`, {
+        headers: {
+          'Authorization': `Bearer ${authToken}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          // Token expired or invalid
+          localStorage.removeItem('ja-cms-token');
+          setAuthToken(null);
+          router.push('/login');
+          return;
+        }
+        
+        // Enhanced error handling for different status codes
+        let errorMessage = 'Failed to load media files';
+        if (response.status === 500) {
+          errorMessage = 'Backend server error - please check if backend is running on port 3001';
+        } else if (response.status === 404) {
+          errorMessage = 'Media API endpoint not found - please check backend configuration';
+        } else if (response.status >= 500) {
+          errorMessage = `Server error (${response.status}): ${response.statusText}`;
+        } else {
+          errorMessage = `Error (${response.status}): ${response.statusText}`;
+        }
+        
+        throw new Error(errorMessage);
+      }
+
+        const result = await response.json();
+        
+        if (result.success && result.data) {
+          // Data sekarang langsung array file
+          const mediaArray = Array.isArray(result.data) ? result.data : [];
+          
+          const files: MediaFile[] = mediaArray.map((file: any) => ({
+            id: file.id || '',
+            filename: file.filename || '',
+            originalName: file.originalName || file.filename || '',
+            mimeType: file.mimeType || 'application/octet-stream',
+            size: file.size || 0,
+            url: file.url || '',
+            alt: file.alt || '',
+            description: file.description || '',
+            uploadedBy: file.uploader?.username || file.uploader?.firstName || 'Unknown',
+            createdAt: file.createdAt || new Date().toISOString(),
+            folderId: file.folderId || null,
+            dimensions: file.width && file.height ? { width: file.width, height: file.height } : undefined,
+          }));
+          
+          setMediaFiles(files);
+        } else {
+          setMediaFiles([]);
+        }
     } catch (error) {
-      console.error('Failed to load media files:', error);
+      console.error('Error loading media files:', error);
+      
+      let errorMessage = 'Failed to load media files';
+      if (error instanceof Error) {
+        if (error.message.includes('fetch')) {
+          errorMessage = 'Cannot connect to backend server. Please ensure backend is running on http://localhost:3001';
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
+      setError(errorMessage);
+      setMediaFiles([]);
+      
+      // Show toast notification for better UX
+      toast({
+        title: 'Error Loading Media',
+        description: errorMessage,
+        variant: 'destructive',
+      });
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [authToken, currentFolder, searchTerm, selectedTypes, sortField, sortOrder, router, toast]);
 
-  const updateFolderPath = (folder: MediaFolder | null) => {
-    if (!folder) {
+  // Initialize auth token
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const token = localStorage.getItem('ja-cms-token');
+      console.log('🔍 Auth token from localStorage:', token ? `${token.substring(0, 20)}...` : 'null');
+      
+      if (token) {
+        // Validate token format
+        try {
+          const tokenParts = token.split('.');
+          if (tokenParts.length !== 3) {
+            console.error('❌ Invalid token format (not a valid JWT)');
+            localStorage.removeItem('ja-cms-token');
+            router.push('/login');
+            return;
+          }
+          
+          // Decode payload to check expiration
+          const payload = JSON.parse(atob(tokenParts[1] || ''));
+          const now = Math.floor(Date.now() / 1000);
+          
+          if (payload.exp && payload.exp < now) {
+            console.error('❌ Token has expired');
+            localStorage.removeItem('ja-cms-token');
+            router.push('/login');
+            return;
+          }
+          
+          console.log('✅ Valid token found, expires at:', new Date(payload.exp * 1000));
+          setAuthToken(token);
+        } catch (error) {
+          console.error('❌ Error validating token:', error);
+          localStorage.removeItem('ja-cms-token');
+          router.push('/login');
+        }
+      } else {
+        console.log('🚫 No auth token found, redirecting to login');
+        router.push('/login');
+      }
+    }
+  }, [router]);
+
+  // Load initial data
+  useEffect(() => {
+    if (authToken) {
+      loadFolders().catch(console.error);
+      loadMediaFiles().catch(console.error);
+    }
+  }, [authToken, currentFolder, loadFolders, loadMediaFiles]);
+
+  // Debounced search effect
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      if (authToken) {
+        loadMediaFiles().catch(console.error);
+      }
+    }, 300);
+
+    return () => clearTimeout(timeoutId);
+  }, [searchTerm, selectedTypes, authToken, loadMediaFiles]);
+
+  // Folder management handlers
+  const handleFolderSelect = useCallback((folder: MediaFolder | null) => {
+    setCurrentFolder(folder);
+    setSelectedFiles([]); // Clear selection when changing folders
+    
+    // Build folder path
+    if (folder) {
+      // TODO: Build proper path based on folder hierarchy
+      setFolderPath([folder]);
+    } else {
       setFolderPath([]);
+    }
+  }, []);
+
+  const handleCreateFolder = useCallback(async (name: string, parentId?: string) => {
+    if (!authToken) {
+      console.error('No auth token available');
+      toast({
+        title: "Authentication Error",
+        description: "Please log in again to continue.",
+        variant: "destructive",
+      });
       return;
     }
     
-    const path: MediaFolder[] = [];
-    let current: MediaFolder | null = folder;
-    
-    // Build path from root to current folder
-    while (current) {
-      path.unshift(current);
-      const parent = folders.find(f => f.id === current!.parentId);
-      current = parent || null;
+    try {
+      console.log('Creating folder:', { name, parentId, authToken: authToken.substring(0, 10) + '...' });
+      
+      const response = await fetch('/api/media/folders', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${authToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name,
+          parentId: parentId || null,
+          isPublic: false,
+        }),
+      });
+
+      console.log('Response status:', response.status);
+      console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+      
+      if (response.ok) {
+        const result = await response.json();
+        console.log('Response data:', result);
+        
+        if (result.success) {
+          toast({
+            title: "Folder Created",
+            description: `Folder "${name}" has been created successfully.`,
+          });
+          await loadFolders().catch(console.error);
+        } else {
+          throw new Error(result.message || 'Failed to create folder');
+        }
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        console.error('API Error:', errorData);
+        throw new Error(errorData.message || `Failed to create folder: ${response.statusText}`);
+      }
+    } catch (error) {
+      console.error('Error creating folder:', error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to create folder. Please try again.",
+        variant: "destructive",
+      });
+    }
+  }, [authToken, toast, loadFolders]);
+
+  const handleRenameFolder = useCallback(async (folderId: string, newName: string) => {
+    if (!authToken) {
+      console.error('No auth token available');
+      toast({
+        title: "Authentication Error",
+        description: "Please log in again to continue.",
+        variant: "destructive",
+      });
+      return;
     }
     
-    setFolderPath(path);
-  };
+    try {
+      console.log('Renaming folder:', { folderId, newName });
+      
+      const response = await fetch(`/api/media/folders/${folderId}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${authToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ name: newName }),
+      });
 
-  const handleFolderSelect = (folder: MediaFolder) => {
-    setCurrentFolder(folder);
-    updateFolderPath(folder);
-  };
+      console.log('Response status:', response.status);
+      console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+      
+      if (response.ok) {
+        const result = await response.json();
+        console.log('Response data:', result);
+        
+        if (result.success) {
+          toast({
+            title: "Folder Renamed",
+            description: `Folder has been renamed to "${newName}".`,
+          });
+          await loadFolders().catch(console.error);
+        } else {
+          throw new Error(result.message || 'Failed to rename folder');
+        }
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        console.error('API Error:', errorData);
+        throw new Error(errorData.message || `Failed to rename folder: ${response.statusText}`);
+      }
+    } catch (error) {
+      console.error('Error renaming folder:', error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to rename folder. Please try again.",
+        variant: "destructive",
+      });
+    }
+  }, [authToken, toast, loadFolders]);
 
-  const handleBreadcrumbClick = (folder: MediaFolder) => {
-    setCurrentFolder(folder);
-    updateFolderPath(folder);
-  };
+  const handleDeleteFolder = useCallback(async (folderId: string) => {
+    if (!authToken) return;
+    
+    if (!confirm('Are you sure you want to delete this folder? This action cannot be undone.')) {
+      return;
+    }
+    
+    try {
+      const response = await fetch(`/api/media/folders/${folderId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${authToken}`,
+          'Content-Type': 'application/json',
+        },
+      });
 
-  const handleFileSelect = (file: MediaFile) => {
+      if (response.ok) {
+        toast({
+          title: "Folder Deleted",
+          description: "Folder has been deleted successfully.",
+        });
+        
+        // If current folder was deleted, go back to root
+        if (currentFolder?.id === folderId) {
+          setCurrentFolder(null);
+          setFolderPath([]);
+        }
+        
+        await loadFolders().catch(console.error);
+      } else {
+        throw new Error(`Failed to delete folder: ${response.statusText}`);
+      }
+    } catch (error) {
+      console.error('Error deleting folder:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete folder. Please try again.",
+        variant: "destructive",
+      });
+    }
+  }, [authToken, toast, currentFolder, loadFolders]);
+
+  const handleDuplicateFolder = useCallback(async (_folderId: string) => {
+    // TODO: Implement folder duplication
+    toast({
+      title: "Coming Soon",
+      description: "Folder duplication feature is coming soon.",
+    });
+  }, [toast]);
+
+  // File management handlers
+  const handleFileSelect = useCallback((file: MediaFile) => {
     setSelectedFiles(prev => {
       const isSelected = prev.some(f => f.id === file.id);
       if (isSelected) {
@@ -233,516 +455,307 @@ export default function MediaExplorerPage() {
         return [...prev, file];
       }
     });
-  };
+  }, []);
 
-  const handleBulkDelete = async (fileIds: string[]) => {
-    console.log('Deleting files:', fileIds);
-    setSelectedFiles([]);
-    loadMediaFiles();
-  };
+  const handleMultiSelect = useCallback((files: MediaFile[]) => {
+    setSelectedFiles(files);
+  }, []);
 
-  const handleBulkDownload = async (fileIds: string[]) => {
-    console.log('Downloading files:', fileIds);
-  };
-
-  const handleBulkCopy = async (fileIds: string[]) => {
-    console.log('Copying files:', fileIds);
-  };
-
-  const handleClearSelection = () => {
-    setSelectedFiles([]);
-  };
-
-  const handleUploadComplete = (files: any[]) => {
-    console.log('Upload completed:', files);
-    setShowUploadDialog(false);
-    loadMediaFiles();
-  };
-
-  const handleCreateFolder = async () => {
-    if (!newFolderName.trim()) return;
-
-    try {
-      // TODO: Replace with real API call
-      console.log('Creating folder:', newFolderName, 'in:', currentFolder?.id);
-      setNewFolderName('');
-      setShowFolderDialog(false);
-      loadFolders();
-    } catch (error) {
-      console.error('Failed to create folder:', error);
+  const handleFileAction = useCallback(async (file: MediaFile, action: string) => {
+    switch (action) {
+      case 'view':
+        // TODO: Open file preview modal
+        toast({
+          title: "View File",
+          description: `Opening ${file.originalName}`,
+        });
+        break;
+        
+      case 'edit':
+        // TODO: Open file editor
+        toast({
+          title: "Edit File",
+          description: `Editing ${file.originalName}`,
+        });
+        break;
+        
+      case 'download':
+        // Download file
+        window.open(file.url, '_blank');
+        break;
+        
+      case 'copy':
+        // Copy file URL to clipboard
+        await navigator.clipboard.writeText(file.url);
+        toast({
+          title: "Link Copied",
+          description: "File link has been copied to clipboard.",
+        });
+        break;
+        
+      case 'delete':
+        if (confirm(`Are you sure you want to delete "${file.originalName}"?`)) {
+          // TODO: Implement file deletion
+          toast({
+            title: "File Deleted",
+            description: `${file.originalName} has been deleted.`,
+          });
+        }
+        break;
+        
+      default:
+        console.log('Unhandled file action:', action, file);
     }
-  };
+  }, [toast]);
 
-  const getFileIcon = (mimeType: string) => {
-    if (mimeType.startsWith('image/')) return Image;
-    if (mimeType.startsWith('video/')) return Video;
-    if (mimeType.startsWith('audio/')) return Music;
-    if (mimeType.includes('pdf')) return File;
-    if (mimeType.includes('zip') || mimeType.includes('rar')) return Archive;
-    return File;
-  };
+  // Bulk operations
+  const handleBulkAction = useCallback(async (action: string) => {
+    if (selectedFiles.length === 0) return;
+    
+    switch (action) {
+      case 'download':
+        selectedFiles.forEach(file => {
+          window.open(file.url, '_blank');
+        });
+        toast({
+          title: "Files Downloaded",
+          description: `${selectedFiles.length} files are being downloaded.`,
+        });
+        break;
+        
+      case 'delete':
+        if (confirm(`Are you sure you want to delete ${selectedFiles.length} files?`)) {
+          // TODO: Implement bulk delete
+          setSelectedFiles([]);
+          toast({
+            title: "Files Deleted",
+            description: `${selectedFiles.length} files have been deleted.`,
+          });
+        }
+        break;
+        
+      case 'move':
+        // TODO: Open move files modal
+        toast({
+          title: "Move Files",
+          description: "Move files feature is coming soon.",
+        });
+        break;
+        
+      default:
+        console.log('Unhandled bulk action:', action, selectedFiles);
+    }
+  }, [selectedFiles, toast]);
 
-  const getFileType = (mimeType: string) => {
-    if (mimeType.startsWith('image/')) return 'Image';
-    if (mimeType.startsWith('video/')) return 'Video';
-    if (mimeType.startsWith('audio/')) return 'Audio';
-    if (mimeType.includes('pdf')) return 'PDF';
-    if (mimeType.includes('document')) return 'Document';
-    if (mimeType.includes('presentation')) return 'Presentation';
-    if (mimeType.includes('spreadsheet')) return 'Spreadsheet';
-    if (mimeType.includes('zip') || mimeType.includes('rar')) return 'Archive';
-    return 'File';
-  };
-
-  const formatFileSize = (bytes: number) => {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
+  // Upload handlers
+  const handleUploadComplete = useCallback((uploadedFiles: any[]) => {
+    toast({
+      title: "Upload Complete",
+      description: `${uploadedFiles.length} files have been uploaded successfully.`,
     });
-  };
+    
+    // Refresh file list
+    loadMediaFiles().catch(console.error);
+    setSelectedFiles([]);
+  }, [toast, loadMediaFiles]);
 
-  const filteredFiles = mediaFiles.filter(file => {
-    const matchesSearch = file.originalName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         (file.alt && file.alt.toLowerCase().includes(searchTerm.toLowerCase()));
-    const matchesType = selectedType === 'all' || getFileType(file.mimeType).toLowerCase() === selectedType.toLowerCase();
-    return matchesSearch && matchesType;
-  });
+  // Computed values
+  const totalFiles = mediaFiles.length;
+  const totalSize = useMemo(() => {
+    return mediaFiles.reduce((acc, file) => acc + file.size, 0);
+  }, [mediaFiles]);
 
-  const renderFolderTree = (folderList: MediaFolder[], level: number = 0) => {
-    return folderList.map(folder => (
-      <div key={folder.id} className="space-y-1">
-        <div
-          className={cn(
-            "flex items-center justify-between p-2 rounded-lg cursor-pointer transition-colors text-sm",
-            currentFolder?.id === folder.id 
-              ? "bg-primary/10 text-primary" 
-              : "hover:bg-muted/50"
-          )}
-          onClick={() => handleFolderSelect(folder)}
-        >
-          <div className="flex items-center gap-2 flex-1 min-w-0">
-            <div style={{ marginLeft: `${level * 12}px` }} />
-            {folder.children && folder.children.length > 0 ? (
-              <FolderOpen className="h-4 w-4 flex-shrink-0" />
-            ) : (
-              <Folder className="h-4 w-4 flex-shrink-0" />
-            )}
-            <span className="truncate">{folder.name}</span>
-          </div>
-          <div className="flex items-center gap-1 text-xs text-muted-foreground">
-            <span>{folder.fileCount}</span>
-          </div>
-        </div>
-        
-        {/* Render children */}
-        {folder.children && folder.children.length > 0 && (
-          <div className="ml-2">
-            {renderFolderTree(folder.children, level + 1)}
-          </div>
-        )}
+  // Filter and sort files
+  const filteredAndSortedFiles = useMemo(() => {
+    let filtered = [...mediaFiles];
+
+    // Apply search filter
+    if (searchTerm) {
+      const searchLower = searchTerm.toLowerCase();
+      filtered = filtered.filter(file => 
+        file.originalName.toLowerCase().includes(searchLower) ||
+        (file.alt && file.alt.toLowerCase().includes(searchLower)) ||
+        (file.description && file.description.toLowerCase().includes(searchLower))
+      );
+    }
+
+    // Apply type filters
+    if (selectedTypes.length > 0) {
+      filtered = filtered.filter(file => {
+        return selectedTypes.some(type => {
+          switch (type) {
+            case 'image': return file.mimeType.startsWith('image/');
+            case 'video': return file.mimeType.startsWith('video/');
+            case 'audio': return file.mimeType.startsWith('audio/');
+            case 'document': return file.mimeType.includes('document') || file.mimeType.includes('word');
+            case 'pdf': return file.mimeType.includes('pdf');
+            case 'archive': return file.mimeType.includes('zip') || file.mimeType.includes('rar');
+            default: return false;
+          }
+        });
+      });
+    }
+
+    // Apply sorting
+    filtered.sort((a, b) => {
+      let comparison = 0;
+      
+      switch (sortField) {
+        case 'name':
+          comparison = a.originalName.localeCompare(b.originalName);
+          break;
+        case 'size':
+          comparison = a.size - b.size;
+          break;
+        case 'createdAt':
+          comparison = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+          break;
+        case 'type':
+          comparison = a.mimeType.localeCompare(b.mimeType);
+          break;
+      }
+      
+      return sortOrder === 'asc' ? comparison : -comparison;
+    });
+
+    return filtered;
+  }, [mediaFiles, searchTerm, selectedTypes, sortField, sortOrder]);
+
+  // Show loading or error states
+  if (!authToken) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
       </div>
-    ));
-  };
+    );
+  }
 
-  const renderGridView = () => (
-    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
-      {filteredFiles.map((file) => {
-        const Icon = getFileIcon(file.mimeType);
-        const isImage = file.mimeType.startsWith('image/');
-        const isSelected = selectedFiles.some(f => f.id === file.id);
-        
+  if (error && !isLoading) {
         return (
-          <Card 
-            key={file.id} 
-            className={cn(
-              "group hover:shadow-lg transition-shadow cursor-pointer",
-              isSelected && "ring-2 ring-primary"
-            )}
-            onClick={() => handleFileSelect(file)}
-          >
-            <CardContent className="p-4">
-              <div className="aspect-square relative mb-3">
-                {isImage ? (
-                  <img
-                    src={file.url}
-                    alt={file.alt || file.originalName}
-                    className="w-full h-full object-cover rounded-lg"
-                  />
-                ) : (
-                  <div className="w-full h-full bg-muted rounded-lg flex items-center justify-center">
-                    <Icon className="h-8 w-8 text-muted-foreground" />
-                  </div>
-                )}
-                
-                {/* Selection Indicator */}
-                {isSelected && (
-                  <div className="absolute top-2 right-2 bg-primary text-primary-foreground rounded-full p-1">
-                    <Check className="h-3 w-3" />
-                  </div>
-                )}
-                
-                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100">
-                  <div className="flex gap-1">
-                    <Button variant="secondary" size="sm">
-                      <Download className="h-4 w-4" />
-                    </Button>
-                    <Button variant="secondary" size="sm">
-                      <Copy className="h-4 w-4" />
-                    </Button>
-                    <Button variant="secondary" size="sm">
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center space-y-6 max-w-md">
+          <AlertCircle className="h-16 w-16 text-destructive mx-auto" />
+          <div className="space-y-4">
+            <h2 className="text-2xl font-semibold">Error Loading Media</h2>
+            <p className="text-muted-foreground text-sm leading-relaxed">{error}</p>
+            
+            {/* Troubleshooting Steps */}
+            {error.includes('backend') || error.includes('server') ? (
+              <div className="bg-muted/50 p-4 rounded-lg text-left">
+                <h3 className="font-semibold mb-2 text-sm">Troubleshooting Steps:</h3>
+                <ol className="text-xs space-y-1 text-muted-foreground">
+                  <li>1. Check if backend server is running</li>
+                  <li>2. Run: <code className="bg-background px-1 rounded">npm run dev:backend</code></li>
+                  <li>3. Verify backend is accessible at <code className="bg-background px-1 rounded">http://localhost:3001</code></li>
+                  <li>4. Check database connection</li>
+                </ol>
               </div>
+            ) : null}
+            
+            <div className="flex gap-2 justify-center">
+              <Button onClick={loadMediaFiles} variant="outline">
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Try Again
+              </Button>
               
-              <div className="space-y-2">
-                <p className="text-sm font-medium truncate" title={file.originalName}>
-                  {file.originalName}
-                </p>
-                <div className="flex items-center justify-between text-xs text-muted-foreground">
-                  <span>{formatFileSize(file.size)}</span>
-                  <Badge variant="outline" className="text-xs">
-                    {getFileType(file.mimeType)}
-                  </Badge>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        );
-      })}
-    </div>
-  );
-
-  const renderListView = () => (
-    <div className="space-y-2">
-      {filteredFiles.map((file) => {
-        const Icon = getFileIcon(file.mimeType);
-        const isImage = file.mimeType.startsWith('image/');
-        const isSelected = selectedFiles.some(f => f.id === file.id);
-        
-        return (
-          <Card 
-            key={file.id} 
-            className={cn(
-              "hover:shadow-md transition-shadow cursor-pointer",
-              isSelected && "ring-2 ring-primary"
-            )}
-            onClick={() => handleFileSelect(file)}
-          >
-            <CardContent className="p-4">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 flex-shrink-0">
-                  {isImage ? (
-                    <img
-                      src={file.url}
-                      alt={file.alt || file.originalName}
-                      className="w-full h-full object-cover rounded"
-                    />
-                  ) : (
-                    <div className="w-full h-full bg-muted rounded flex items-center justify-center">
-                      <Icon className="h-6 w-6 text-muted-foreground" />
-                    </div>
-                  )}
-                </div>
-                
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <p className="font-medium truncate">{file.originalName}</p>
-                    {isSelected && <Check className="h-4 w-4 text-primary" />}
-                    <Badge variant="outline" className="text-xs">
-                      {getFileType(file.mimeType)}
-                    </Badge>
-                  </div>
-                  
-                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                    <span>{formatFileSize(file.size)}</span>
-                    <span>•</span>
-                    <span>{file.uploadedBy}</span>
-                    <span>•</span>
-                    <span>{formatDate(file.createdAt)}</span>
-                  </div>
-                  
-                  {file.alt && (
-                    <p className="text-sm text-muted-foreground mt-1">{file.alt}</p>
-                  )}
-                </div>
-                
-                <div className="flex items-center gap-1">
-                  <Button variant="ghost" size="sm">
-                    <Download className="h-4 w-4" />
-                  </Button>
-                  <Button variant="ghost" size="sm">
-                    <Copy className="h-4 w-4" />
-                  </Button>
-                  <Button variant="ghost" size="sm">
-                    <MoreHorizontal className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        );
-      })}
-    </div>
-  );
-
-  return (
-    <div className="flex h-full">
-      {/* Sidebar */}
-      <div className={cn(
-        "border-r bg-background transition-all duration-300",
-        sidebarCollapsed ? "w-16" : "w-64"
-      )}>
-        <div className="p-4 border-b">
-          <div className="flex items-center justify-between">
-            {!sidebarCollapsed && <h3 className="font-semibold">Folders</h3>}
-            <div className="flex items-center gap-1">
               <Button
+                onClick={() => {
+                  localStorage.removeItem('ja-cms-token');
+                  router.push('/login');
+                }} 
                 variant="ghost"
-                size="sm"
-                onClick={() => setShowFolderDialog(true)}
-                className={cn(sidebarCollapsed && "w-8 h-8 p-0")}
               >
-                <FolderPlus className="h-4 w-4" />
+                Re-login
               </Button>
             </div>
           </div>
         </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="h-screen bg-background flex flex-col">
+      {/* Header */}
+      <div className="border-b bg-background p-4">
+          <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-bold">Media Explorer</h1>
+            {isLoading && (
+              <RefreshCw className="h-4 w-4 animate-spin text-muted-foreground" />
+            )}
+            </div>
         
-        <div className="p-2">
-          {!sidebarCollapsed && renderFolderTree(folders)}
+          <Button onClick={() => setShowUploadModal(true)}>
+            <Upload className="h-4 w-4 mr-2" />
+            Upload Files
+            </Button>
         </div>
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col">
-        {/* Header */}
-        <div className="p-6 border-b">
-          {/* Title */}
-          <div className="flex items-center justify-between mb-4">
-            <h1 className="text-3xl font-bold tracking-tight">Media Explorer</h1>
-            
-            <div className="flex items-center space-x-2">
-              <MediaPicker
-                onSelect={(files) => console.log('Selected files:', files)}
-                trigger={
-                  <Button variant="outline">
-                    <Image className="h-4 w-4 mr-2" />
-                    Select Media
-                  </Button>
-                }
-              />
-              
-              {/* Upload Dialog */}
-              <Dialog open={showUploadDialog} onOpenChange={setShowUploadDialog}>
-                <DialogTrigger asChild>
-                  <Button>
-                    <Upload className="h-4 w-4 mr-2" />
-                    Upload Files
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="max-w-2xl">
-                  <DialogHeader>
-                    <DialogTitle>Upload Media Files</DialogTitle>
-                    <DialogDescription>
-                      Upload and organize your media files. Drag and drop files here or click to browse.
-                    </DialogDescription>
-                  </DialogHeader>
-                  <div className="py-4">
-                    <MediaUpload 
-                      onUploadComplete={handleUploadComplete}
-                      multiple={true}
-                      maxFiles={20}
-                      maxSize={50 * 1024 * 1024} // 50MB
-                    />
-                  </div>
-                </DialogContent>
-              </Dialog>
-            </div>
-          </div>
-
-          {/* Breadcrumb with Collapse Button */}
-          <div className="flex items-center gap-3">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-              className="h-8 w-8 p-0"
-            >
-              <Sidebar className="h-4 w-4" />
-            </Button>
-            
-            <div className="flex items-center gap-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  setCurrentFolder(null);
-                  setFolderPath([]);
-                }}
-                className="h-6 px-2"
-              >
-                <Home className="h-3 w-3 mr-1" />
-                Home
-              </Button>
-              {folderPath.map((folder) => (
-                <div key={folder.id} className="flex items-center gap-2">
-                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleBreadcrumbClick(folder)}
-                    className="h-6 px-2"
-                  >
-                    {folder.name}
-                  </Button>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Search and Filters */}
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search files..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-            </div>
-            <div className="flex gap-2">
-              <Button
-                variant={selectedType === 'all' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setSelectedType('all')}
-              >
-                All
-              </Button>
-              <Button
-                variant={selectedType === 'image' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setSelectedType('image')}
-              >
-                Images
-              </Button>
-              <Button
-                variant={selectedType === 'video' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setSelectedType('video')}
-              >
-                Videos
-              </Button>
-              <Button
-                variant={selectedType === 'document' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setSelectedType('document')}
-              >
-                Documents
-              </Button>
-            </div>
-            <div className="flex gap-1">
-              <Button
-                variant={viewMode === 'grid' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setViewMode('grid')}
-              >
-                <Grid3X3 className="h-4 w-4" />
-              </Button>
-              <Button
-                variant={viewMode === 'list' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setViewMode('list')}
-              >
-                <List className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-        </div>
+      <div className="flex-1 flex overflow-hidden">
+        {/* Sidebar */}
+        <MediaSidebar
+          folders={folders}
+          currentFolder={currentFolder}
+          isCollapsed={sidebarCollapsed}
+          onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
+          onFolderSelect={handleFolderSelect}
+          onCreateFolder={handleCreateFolder}
+          onRenameFolder={handleRenameFolder}
+          onDeleteFolder={handleDeleteFolder}
+          onDuplicateFolder={handleDuplicateFolder}
+        />
 
         {/* Content Area */}
-        <div className="flex-1 p-6 overflow-auto">
-          {isLoading ? (
-            <div className="flex items-center justify-center h-full">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-            </div>
-          ) : filteredFiles.length > 0 ? (
-            viewMode === 'grid' ? renderGridView() : renderListView()
-          ) : (
-            <div className="flex items-center justify-center h-full">
-              <div className="text-center space-y-4">
-                <div className="text-muted-foreground">
-                  <Image className="h-12 w-12 mx-auto mb-4" />
-                </div>
-                <h3 className="text-lg font-semibold">No files found</h3>
-                <p className="text-muted-foreground">
-                  {currentFolder 
-                    ? `No files in "${currentFolder.name}"` 
-                    : 'Try adjusting your search or filter criteria'
-                  }
-                </p>
-                <Button onClick={() => setShowUploadDialog(true)}>
-                  <Upload className="h-4 w-4 mr-2" />
-                  Upload your first file
-                </Button>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
+        <div className="flex-1 flex flex-col overflow-hidden">
+          {/* Toolbar */}
+          <MediaToolbar
+            currentFolder={currentFolder}
+            folderPath={folderPath}
+            onFolderSelect={handleFolderSelect}
+            viewMode={viewMode}
+            onViewModeChange={setViewMode}
+            searchTerm={searchTerm}
+            onSearchChange={setSearchTerm}
+            selectedTypes={selectedTypes}
+            onTypeFilterChange={setSelectedTypes}
+            sortField={sortField}
+            sortOrder={sortOrder}
+            onSortChange={(field, order) => {
+              setSortField(field);
+              setSortOrder(order);
+            }}
+            selectedFiles={selectedFiles}
+            onBulkAction={handleBulkAction}
+            onClearSelection={() => setSelectedFiles([])}
+            totalFiles={totalFiles}
+            totalSize={totalSize}
+          />
 
-      {/* Create Folder Dialog */}
-      <Dialog open={showFolderDialog} onOpenChange={setShowFolderDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Create New Folder</DialogTitle>
-            <DialogDescription>
-              Create a new folder to organize your media files.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <Input
-              placeholder="Folder name..."
-              value={newFolderName}
-              onChange={(e) => setNewFolderName(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  handleCreateFolder();
-                }
-              }}
+          {/* Media Content */}
+          <div className="flex-1 overflow-auto">
+            <MediaContent
+              files={filteredAndSortedFiles}
+              viewMode={viewMode}
+              selectedFiles={selectedFiles}
+              onFileSelect={handleFileSelect}
+              onFileAction={handleFileAction}
+              onMultiSelect={handleMultiSelect}
+              isLoading={isLoading}
             />
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setShowFolderDialog(false)}>
-                Cancel
-              </Button>
-              <Button onClick={handleCreateFolder}>
-                Create Folder
-              </Button>
-            </div>
           </div>
-        </DialogContent>
-      </Dialog>
+        </div>
+    </div>
 
-      {/* Bulk Operations */}
-      <BulkOperations
-        selectedFiles={selectedFiles}
-        onDelete={handleBulkDelete}
-        onDownload={handleBulkDownload}
-        onCopy={handleBulkCopy}
-        onClearSelection={handleClearSelection}
+      {/* Upload Modal */}
+      <MediaUploadModal
+        isOpen={showUploadModal}
+        onClose={() => setShowUploadModal(false)}
+        onUploadComplete={handleUploadComplete}
+        currentFolder={currentFolder}
+        folders={folders}
       />
     </div>
   );

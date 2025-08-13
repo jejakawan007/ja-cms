@@ -141,7 +141,7 @@ export class MediaService extends EventEmitter {
 
   constructor() {
     super();
-    this.uploadDir = path.join(process.cwd(), 'uploads');
+    this.uploadDir = path.join(__dirname, '..', 'uploads');
     this.ensureUploadDir();
   }
 
@@ -205,8 +205,7 @@ export class MediaService extends EventEmitter {
             tags: {
               select: {
                 id: true,
-                name: true,
-                color: true
+                name: true
               }
             }
           }
@@ -226,7 +225,8 @@ export class MediaService extends EventEmitter {
         }
       };
     } catch (error) {
-      throw new Error('Failed to get media files');
+      console.error('Detailed error in getAllMedia:', error);
+      throw new Error(`Failed to get media files: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 
@@ -257,8 +257,7 @@ export class MediaService extends EventEmitter {
           tags: {
             select: {
               id: true,
-              name: true,
-              color: true
+              name: true
             }
           }
         }
@@ -270,7 +269,8 @@ export class MediaService extends EventEmitter {
 
       return media;
     } catch (error) {
-      throw new Error('Failed to get media file');
+      console.error('Detailed error in getMediaById:', error);
+      throw new Error(`Failed to get media file: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 
@@ -304,7 +304,13 @@ export class MediaService extends EventEmitter {
       // Generate unique filename
       const fileExtension = path.extname(file.originalname);
       const filename = `${uuidv4()}${fileExtension}`;
-      const uploadPath = path.join(process.cwd(), 'uploads', filename);
+      const uploadPath = path.join(__dirname, '..', 'uploads', filename);
+      
+      // Ensure uploads directory exists
+      const uploadsDir = path.dirname(uploadPath);
+      if (!fs.existsSync(uploadsDir)) {
+        fs.mkdirSync(uploadsDir, { recursive: true });
+      }
 
       // Save file to disk
       fs.writeFileSync(uploadPath, file.buffer);
@@ -417,7 +423,7 @@ export class MediaService extends EventEmitter {
       }
 
       // Delete file from disk
-      const filePath = path.join(process.cwd(), 'uploads', media.filename);
+      const filePath = path.join(__dirname, '..', 'uploads', media.filename);
       if (fs.existsSync(filePath)) {
         fs.unlinkSync(filePath);
       }
@@ -771,5 +777,293 @@ export class MediaService extends EventEmitter {
       tag: tag.name,
       count: tag._count.files
     }));
+  }
+
+  // Get all folders
+  static async getAllFolders(): Promise<any[]> {
+    try {
+      const folders = await prisma.mediaFolder.findMany({
+        include: {
+          children: {
+            include: {
+              _count: {
+                select: { files: true }
+              }
+            }
+          },
+          _count: {
+            select: { files: true }
+          },
+          creator: {
+            select: {
+              id: true,
+              username: true,
+              firstName: true,
+              lastName: true
+            }
+          }
+        },
+        orderBy: {
+          createdAt: 'desc'
+        }
+      });
+
+      // Transform data untuk frontend
+      return folders.map(folder => ({
+        id: folder.id,
+        name: folder.name,
+        path: folder.path,
+        description: folder.description,
+        parentId: folder.parentId,
+        fileCount: folder._count.files,
+        totalSize: 0, // TODO: Calculate total size
+        isPublic: folder.isPublic,
+        createdAt: folder.createdAt.toISOString(),
+        updatedAt: folder.updatedAt.toISOString(),
+        creator: folder.creator,
+        children: folder.children.map(child => ({
+          id: child.id,
+          name: child.name,
+          path: child.path,
+          description: child.description,
+          parentId: child.parentId,
+          fileCount: child._count.files,
+          totalSize: 0, // TODO: Calculate total size
+          isPublic: child.isPublic,
+          createdAt: child.createdAt.toISOString(),
+          updatedAt: child.updatedAt.toISOString()
+        }))
+      }));
+    } catch (error) {
+      console.error('Detailed error in getAllFolders:', error);
+      throw new Error(`Failed to get folders: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  // Create folder
+  static async createFolder(data: {
+    name: string;
+    description?: string;
+    parentId?: string;
+    isPublic?: boolean;
+    createdBy: string;
+  }): Promise<any> {
+    try {
+      // Generate slug dari name
+      const slug = data.name.toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/(^-|-$)/g, '');
+
+      // Generate path
+      let path = `/${slug}`;
+      if (data.parentId) {
+        const parent = await prisma.mediaFolder.findUnique({
+          where: { id: data.parentId },
+          select: { path: true }
+        });
+        if (parent) {
+          path = `${parent.path}/${slug}`;
+        }
+      }
+
+      const folder = await prisma.mediaFolder.create({
+        data: {
+          name: data.name,
+          slug,
+          description: data.description,
+          parentId: data.parentId,
+          path,
+          isPublic: data.isPublic || false,
+          createdBy: data.createdBy
+        },
+        include: {
+          creator: {
+            select: {
+              id: true,
+              username: true,
+              firstName: true,
+              lastName: true
+            }
+          },
+          _count: {
+            select: { files: true }
+          }
+        }
+      });
+
+      return {
+        id: folder.id,
+        name: folder.name,
+        path: folder.path,
+        description: folder.description,
+        parentId: folder.parentId,
+        fileCount: folder._count.files,
+        totalSize: 0,
+        isPublic: folder.isPublic,
+        createdAt: folder.createdAt.toISOString(),
+        updatedAt: folder.updatedAt.toISOString(),
+        creator: folder.creator
+      };
+    } catch (error) {
+      throw new Error(`Failed to create folder: ${error}`);
+    }
+  }
+
+  // Get folder by ID
+  static async getFolderById(id: string): Promise<any | null> {
+    try {
+      const folder = await prisma.mediaFolder.findUnique({
+        where: { id },
+        include: {
+          creator: {
+            select: {
+              id: true,
+              username: true,
+              firstName: true,
+              lastName: true
+            }
+          },
+          children: {
+            include: {
+              _count: {
+                select: { files: true }
+              }
+            }
+          },
+          _count: {
+            select: { files: true }
+          }
+        }
+      });
+
+      if (!folder) return null;
+
+      return {
+        id: folder.id,
+        name: folder.name,
+        path: folder.path,
+        description: folder.description,
+        parentId: folder.parentId,
+        fileCount: folder._count.files,
+        totalSize: 0,
+        isPublic: folder.isPublic,
+        createdAt: folder.createdAt.toISOString(),
+        updatedAt: folder.updatedAt.toISOString(),
+        creator: folder.creator,
+        children: folder.children.map(child => ({
+          id: child.id,
+          name: child.name,
+          path: child.path,
+          description: child.description,
+          parentId: child.parentId,
+          fileCount: child._count.files,
+          totalSize: 0,
+          isPublic: child.isPublic,
+          createdAt: child.createdAt.toISOString(),
+          updatedAt: child.updatedAt.toISOString()
+        }))
+      };
+    } catch (error) {
+      throw new Error(`Failed to get folder: ${error}`);
+    }
+  }
+
+  // Update folder
+  static async updateFolder(id: string, data: {
+    name?: string;
+    description?: string;
+    parentId?: string;
+    isPublic?: boolean;
+  }): Promise<any> {
+    try {
+      const updateData: any = { ...data };
+
+      // Update slug dan path jika name berubah
+      if (data.name) {
+        updateData.slug = data.name.toLowerCase()
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/(^-|-$)/g, '');
+        
+        // Update path
+        let path = `/${updateData.slug}`;
+        if (data.parentId) {
+          const parent = await prisma.mediaFolder.findUnique({
+            where: { id: data.parentId },
+            select: { path: true }
+          });
+          if (parent) {
+            path = `${parent.path}/${updateData.slug}`;
+          }
+        }
+        updateData.path = path;
+      }
+
+      const folder = await prisma.mediaFolder.update({
+        where: { id },
+        data: updateData,
+        include: {
+          creator: {
+            select: {
+              id: true,
+              username: true,
+              firstName: true,
+              lastName: true
+            }
+          },
+          _count: {
+            select: { files: true }
+          }
+        }
+      });
+
+      return {
+        id: folder.id,
+        name: folder.name,
+        path: folder.path,
+        description: folder.description,
+        parentId: folder.parentId,
+        fileCount: folder._count.files,
+        totalSize: 0,
+        isPublic: folder.isPublic,
+        createdAt: folder.createdAt.toISOString(),
+        updatedAt: folder.updatedAt.toISOString(),
+        creator: folder.creator
+      };
+    } catch (error) {
+      throw new Error(`Failed to update folder: ${error}`);
+    }
+  }
+
+  // Delete folder
+  static async deleteFolder(id: string): Promise<void> {
+    try {
+      // Check if folder has files
+      const folder = await prisma.mediaFolder.findUnique({
+        where: { id },
+        include: {
+          _count: {
+            select: { files: true, children: true }
+          }
+        }
+      });
+
+      if (!folder) {
+        throw new Error('Folder not found');
+      }
+
+      if (folder._count.files > 0) {
+        throw new Error('Cannot delete folder with files. Please move or delete files first.');
+      }
+
+      if (folder._count.children > 0) {
+        throw new Error('Cannot delete folder with subfolders. Please move or delete subfolders first.');
+      }
+
+      await prisma.mediaFolder.delete({
+        where: { id }
+      });
+    } catch (error) {
+      throw new Error(`Failed to delete folder: ${error}`);
+    }
   }
 }

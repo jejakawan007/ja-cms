@@ -31,10 +31,13 @@ export { default as EnhancedSEOTab } from './content/advanced/EnhancedSEOTab'
 export { default as PerformanceOptimizationTab } from './settings/PerformanceOptimizationTab'
 
 // Media Management Components
-export { MediaCard } from './media/MediaCard'
-export { MediaTable } from './media/MediaTable'
-export { MediaUpload } from './media/MediaUpload'
 export { MediaPicker } from './media/MediaPicker'
+export { FeaturedImagePicker } from './media/FeaturedImagePicker'
+export { MediaSidebar, type MediaFolder } from './media/MediaSidebar'
+export { MediaToolbar, type ViewMode as MediaViewMode, type SortField, type SortOrder, type MediaFile } from './media/MediaToolbar'
+export { MediaContent } from './media/MediaContent'
+export { MediaUploadModal, type UploadFile } from './media/MediaUploadModal'
+export { MediaAnalytics } from './media/MediaAnalytics'
 
 // Theme Management Components
 export { ThemeCard } from './themes/ThemeCard'

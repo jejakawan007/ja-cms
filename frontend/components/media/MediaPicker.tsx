@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Search, 
   Image, 
@@ -42,7 +42,6 @@ interface MediaPickerProps {
   onSelect?: (media: MediaFile[]) => void;
   multiple?: boolean;
   maxFiles?: number;
-  acceptedTypes?: string[];
   trigger?: React.ReactNode;
   className?: string;
 }
@@ -51,7 +50,6 @@ export function MediaPicker({
   onSelect,
   multiple = false,
   maxFiles = 1,
-  acceptedTypes = ['image/*', 'video/*'],
   trigger,
   className
 }: MediaPickerProps) {

@@ -76,9 +76,12 @@ class ApiClient {
 
     // Add timeout for requests (compatible implementation)
     let timeoutId: NodeJS.Timeout | undefined;
-    if (typeof AbortSignal !== 'undefined' && AbortSignal.timeout) {
+    if (
+      typeof AbortSignal !== 'undefined' &&
+      typeof (AbortSignal as any).timeout === 'function'
+    ) {
       // Use AbortSignal.timeout if available (newer browsers)
-      config.signal = AbortSignal.timeout(10000); // 10 second timeout
+      config.signal = (AbortSignal as any).timeout(10000); // 10 second timeout
     } else {
       // Fallback for older browsers
       const controller = new AbortController();
@@ -124,14 +127,19 @@ class ApiClient {
       }
 
       let data: any;
-      const contentType = response.headers.get('content-type');
+      const contentType = response.headers.get('content-type') || '';
       
       try {
         if (contentType && contentType.includes('application/json')) {
           data = await response.json();
         } else {
           // Handle non-JSON responses
-          const text = await response.text();
+          let text: string = '';
+          try {
+            text = await response.text();
+          } catch (_) {
+            text = '';
+          }
           
           // Try to parse as JSON if it looks like JSON
           if (text.trim().startsWith('{') || text.trim().startsWith('[')) {
@@ -144,7 +152,7 @@ class ApiClient {
                 error: {
                   code: 'INVALID_RESPONSE',
                   message: 'Server returned non-JSON response',
-                  details: text.substring(0, 200) // First 200 chars
+                  details: String(text).slice(0, 200) // First 200 chars
                 }
               };
             }
@@ -155,7 +163,7 @@ class ApiClient {
               error: {
                 code: 'HTML_RESPONSE',
                 message: 'Server returned HTML instead of JSON',
-                details: text.substring(0, 200) // First 200 chars
+                details: String(text).slice(0, 200) // First 200 chars
               }
             };
           }

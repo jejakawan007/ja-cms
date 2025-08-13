@@ -15,54 +15,42 @@ export const useAuth = () => {
   const [error, setError] = useState<string | null>(null);
 
   // Helper to convert API user to AuthUser
-  const convertToAuthUser = (apiUser: any): AuthUser => ({
-    id: apiUser.id,
-    email: apiUser.email,
-    firstName: apiUser.firstName,
-    lastName: apiUser.lastName,
-    role: apiUser.role,
-    isActive: apiUser.isActive,
-    permissions: apiUser.permissions || [],
-    preferences: apiUser.preferences || {},
-    isVerified: apiUser.isVerified || true,
-    avatar: apiUser.avatar || null,
-    bio: apiUser.bio || null,
-    createdAt: apiUser.createdAt || new Date().toISOString(),
-    updatedAt: apiUser.updatedAt || new Date().toISOString(),
-  });
+  const convertToAuthUser = (apiUser: any): AuthUser => {
+    // Berikan default preferences jika tidak ada
+    const defaultPreferences = {
+      theme: 'light' as const,
+      language: 'en',
+      timezone: 'UTC',
+      notifications: {
+        email: true,
+        push: true,
+        desktop: true,
+      },
+      dashboard: {
+        layout: 'grid' as const,
+        widgets: ['stats', 'recent-posts', 'recent-activity'],
+      },
+    };
 
-  // Auto-login for development environment
-  const autoLogin = async () => {
-    try {
-      console.log('🔄 Attempting auto-login for development...');
-      const response = await authApi.login({ 
-        email: 'admin@jacms.com', 
-        password: 'admin123' 
-      });
-      
-      if (response.success && response.data) {
-        // Store tokens
-        localStorage.setItem('ja-cms-token', response.data.token);
-        localStorage.setItem('refreshToken', response.data.refreshToken);
-        
-        // Set cookies
-        const cookieOptions = `path=/; max-age=86400; SameSite=Lax; secure=false; domain=localhost`;
-        document.cookie = `ja-cms-token=${response.data.token}; ${cookieOptions}`;
-        document.cookie = `refreshToken=${response.data.refreshToken}; ${cookieOptions}`;
-        
-        // Set user
-        const userData = convertToAuthUser(response.data.user);
-        setUser(userData);
-        
-        console.log('✅ Auto-login successful:', userData.email);
-        return true;
-      }
-      return false;
-    } catch (err) {
-      console.error('❌ Auto-login failed:', err);
-      return false;
-    }
+    return {
+      id: apiUser.id,
+      email: apiUser.email,
+      firstName: apiUser.firstName,
+      lastName: apiUser.lastName,
+      role: apiUser.role,
+      isActive: apiUser.isActive,
+      // Safely handle potentially missing fields
+      permissions: apiUser.permissions || [],
+      preferences: apiUser.preferences || defaultPreferences,
+      isVerified: apiUser.isVerified !== undefined ? apiUser.isVerified : true,
+      avatar: apiUser.avatar || null,
+      bio: apiUser.bio || null,
+      createdAt: apiUser.createdAt || new Date().toISOString(),
+      updatedAt: apiUser.updatedAt || new Date().toISOString(),
+    };
   };
+
+
 
   // Check if user is logged in on mount
   useEffect(() => {
@@ -71,14 +59,6 @@ export const useAuth = () => {
         const token = localStorage.getItem('ja-cms-token');
         
         if (!token) {
-          // Auto-login for development if no token exists
-          if (process.env.NODE_ENV === 'development') {
-            const autoLoginSuccess = await autoLogin();
-            if (autoLoginSuccess) {
-              setLoading(false);
-              return;
-            }
-          }
           setLoading(false);
           return;
         }
@@ -93,33 +73,16 @@ export const useAuth = () => {
         if (response.success && response.data) {
           setUser(convertToAuthUser(response.data));
         } else {
-          // Token is invalid, try auto-login for development
-          if (process.env.NODE_ENV === 'development') {
-            const autoLoginSuccess = await autoLogin();
-            if (!autoLoginSuccess) {
-              localStorage.removeItem('ja-cms-token');
-              localStorage.removeItem('refreshToken');
-            }
-          } else {
-            localStorage.removeItem('ja-cms-token');
-            localStorage.removeItem('refreshToken');
-          }
+          // Token is invalid, clear tokens
+          localStorage.removeItem('ja-cms-token');
+          localStorage.removeItem('refreshToken');
         }
       } catch (err) {
         console.error('Auth check failed:', err);
-        // Try auto-login for development on auth errors
-        if (process.env.NODE_ENV === 'development') {
-          const autoLoginSuccess = await autoLogin();
-          if (!autoLoginSuccess) {
-            localStorage.removeItem('ja-cms-token');
-            localStorage.removeItem('refreshToken');
-          }
-        } else {
-          // Only remove tokens if it's a real auth error, not a network error
-          if (err instanceof Error && err.message.includes('401')) {
-            localStorage.removeItem('ja-cms-token');
-            localStorage.removeItem('refreshToken');
-          }
+        // Only remove tokens if it's a real auth error, not a network error
+        if (err instanceof Error && err.message.includes('401')) {
+          localStorage.removeItem('ja-cms-token');
+          localStorage.removeItem('refreshToken');
         }
       } finally {
         setLoading(false);
@@ -315,6 +278,8 @@ export const useAuth = () => {
     if (!user) return false;
     return roles.includes(user.role);
   };
+
+
 
   return {
     user,

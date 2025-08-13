@@ -8,98 +8,98 @@ datasource db {
 }
 
 model User {
-  id                              String                    @id @default(cuid())
-  email                           String                    @unique
-  username                        String?                   @unique
+  id                              String                     @id @default(cuid())
+  email                           String                     @unique
+  username                        String?                    @unique
   password                        String
   firstName                       String?
   lastName                        String?
   avatar                          String?
   bio                             String?
-  isActive                        Boolean                   @default(true)
-  isVerified                      Boolean                   @default(false)
-  role                            UserRole                  @default(USER)
-  createdAt                       DateTime                  @default(now())
-  updatedAt                       DateTime                  @updatedAt
-  dashboardActivities             DashboardActivity[]       @relation("UserDashboardActivities")
-  dashboardSettings               DashboardSettings?        @relation("UserDashboardSettings")
-  dashboardPreference             UserDashboardPreference?  @relation("UserDashboardPreferences")
-  userWidgets                     UserWidget[]              @relation("UserWidgets")
-  activeSessions                  ActiveSession[]           @relation("UserActiveSessions")
-  analyticsEvents                 AnalyticsEvent[]          @relation("UserAnalyticsEvents")
-  analyticsSessions               AnalyticsSession[]        @relation("UserAnalyticsSessions")
-  userApiRequestLogs              ApiRequestLog[]           @relation("UserApiRequestLogs")
-  auditLogs                       AuditLog[]                @relation("UserAuditLogs")
-  autosavedContent                AutosavedContent[]        @relation("UserAutosavedContent")
-  createdBackupJobs               BackupJob[]               @relation("CreatedBackupJobs")
-  blockUsage                      BlockUsageAnalytics[]     @relation("UserBlockUsage")
-  commentThreads                  CommentThread[]           @relation("AuthoredCommentThreads")
-  commentVotes                    CommentVote[]             @relation("CommentVotes")
+  isActive                        Boolean                    @default(true)
+  isVerified                      Boolean                    @default(false)
+  role                            UserRole                   @default(USER)
+  createdAt                       DateTime                   @default(now())
+  updatedAt                       DateTime                   @updatedAt
+  dashboardActivities             DashboardActivity[]        @relation("UserDashboardActivities")
+  dashboardSettings               DashboardSettings?         @relation("UserDashboardSettings")
+  dashboardPreference             UserDashboardPreference?   @relation("UserDashboardPreferences")
+  userWidgets                     UserWidget[]               @relation("UserWidgets")
+  activeSessions                  ActiveSession[]            @relation("UserActiveSessions")
+  analyticsEvents                 AnalyticsEvent[]           @relation("UserAnalyticsEvents")
+  analyticsSessions               AnalyticsSession[]         @relation("UserAnalyticsSessions")
+  userApiRequestLogs              ApiRequestLog[]            @relation("UserApiRequestLogs")
+  auditLogs                       AuditLog[]                 @relation("UserAuditLogs")
+  autosavedContent                AutosavedContent[]         @relation("UserAutosavedContent")
+  createdBackupJobs               BackupJob[]                @relation("CreatedBackupJobs")
+  blockUsage                      BlockUsageAnalytics[]      @relation("UserBlockUsage")
+  createdCategoryRules            CategoryRule[]             @relation("CreatedCategoryRules")
+  commentThreads                  CommentThread[]            @relation("AuthoredCommentThreads")
+  commentVotes                    CommentVote[]              @relation("CommentVotes")
   comments                        Comment[]
-  content                         Content[]                 @relation("UserContent")
-  contentLocks                    ContentLock[]             @relation("ContentLocks")
-  createdRevisions                ContentRevision[]         @relation("CreatedRevisions")
-  createdSchedules                ContentSchedule[]         @relation("CreatedSchedules")
-  createdTemplates                ContentTemplate[]         @relation("CreatedTemplates")
-  createdWorkflows                ContentWorkflow[]         @relation("CreatedWorkflows")
-  resolvedDatabaseAlerts          DatabaseAlert[]           @relation("ResolvedDatabaseAlerts")
-  executedDatabaseCleanups        DatabaseCleanupHistory[]  @relation("ExecutedDatabaseCleanups")
-  createdDatabaseOptimizationJobs DatabaseOptimizationJob[] @relation("CreatedDatabaseOptimizationJobs")
-  createdDevProjects              DevProject[]              @relation("CreatedDevProjects")
-  resolvedDiagnosticAlerts        DiagnosticAlert[]         @relation("ResolvedDiagnosticAlerts")
-  createdDiagnosticJobs           DiagnosticJob[]           @relation("CreatedDiagnosticJobs")
-  executedDiagnostics             DiagnosticResult[]        @relation("ExecutedDiagnostics")
-  resolvedComments                EditorComment[]           @relation("UserResolvedComments")
-  editorComments                  EditorComment[]           @relation("UserEditorComments")
-  editorSessions                  EditorSession[]           @relation("UserEditorSessions")
-  createdExportJobs               ExportJob[]               @relation("CreatedExportJobs")
-  createdFirewallRules            FirewallRule[]            @relation("CreatedFirewallRules")
-  createdImportJobs               ImportJob[]               @relation("CreatedImportJobs")
-  executedResponses               IncidentResponse[]        @relation("ExecutedResponses")
-  createdIpLists                  IpList[]                  @relation("CreatedIpLists")
-  likes                           Like[]
-  loginAttempts                   LoginAttempt[]            @relation("UserLoginAttempts")
-  triggeredMaintenanceExecutions  MaintenanceExecution[]    @relation("TriggeredMaintenanceExecutions")
-  createdMaintenanceTasks         MaintenanceTask[]         @relation("CreatedMaintenanceTasks")
-  authoredMarketplacePlugins      MarketplacePlugin[]       @relation("AuthoredMarketplacePlugins")
-  media                           Media[]
-  uploadedMediaFiles              MediaFile[]               @relation("UploadedMediaFiles")
-  createdMediaFolders             MediaFolder[]             @relation("CreatedMediaFolders")
-  mediaUploadSessions             MediaUploadSession[]      @relation("MediaUploadSessions")
-  notifications                   Notification[]            @relation("UserNotifications")
-  pageViews                       PageView[]                @relation("UserPageViews")
-  passwordHistory                 PasswordHistory[]         @relation("UserPasswordHistory")
-  developedPlugins                PluginDevelopment[]       @relation("DevelopedPlugins")
-  userPluginDownloads             PluginDownload[]          @relation("UserPluginDownloads")
-  userPluginLicenses              PluginLicense[]           @relation("UserPluginLicenses")
-  purchasedPlugins                PluginPurchase[]          @relation("PurchasedPlugins")
-  writtenPluginReviews            PluginReview[]            @relation("WrittenPluginReviews")
-  boughtPlugins                   PluginTransaction[]       @relation("BoughtPlugins")
-  soldPlugins                     PluginTransaction[]       @relation("SoldPlugins")
-  installedPlugins                Plugin[]                  @relation("InstalledPlugins")
-  posts                           Post[]
-  executedReports                 ReportExecution[]         @relation("ExecutedReports")
-  createdReports                  Report[]                  @relation("CreatedReports")
-  createdRestoreJobs              RestoreJob[]              @relation("CreatedRestoreJobs")
-  userReviewVotes                 ReviewVote[]              @relation("UserReviewVotes")
-  updatedSecurityConfigs          SecurityConfig[]          @relation("UpdatedSecurityConfigs")
-  resolvedSecurityEvents          SecurityEvent[]           @relation("ResolvedSecurityEvents")
-  securityEvents                  SecurityEvent[]           @relation("UserSecurityEvents")
-  assignedIncidents               SecurityIncident[]        @relation("AssignedIncidents")
-  reportedIncidents               SecurityIncident[]        @relation("ReportedIncidents")
-  resolvedIncidents               SecurityIncident[]        @relation("ResolvedIncidents")
-  sessions                        Session[]
-  resolvedSystemIssues            SystemIssue[]             @relation("ResolvedSystemIssues")
-  analyticsData                   UserAnalytics[]           @relation("UserAnalyticsData")
-  settings                        UserSetting[]
-  assignedWorkflows               WorkflowInstance[]        @relation("AssignedWorkflows")
-  assignedSteps                   WorkflowStep[]            @relation("AssignedWorkflowSteps")
-  createdCategoryRules            CategoryRule[]            @relation("CreatedCategoryRules")
-  createdContentGaps              ContentGapAnalysis[]      @relation("CreatedContentGaps")
+  content                         Content[]                  @relation("UserContent")
+  createdContentGaps              ContentGapAnalysis[]       @relation("CreatedContentGaps")
   assignedContentGaps             ContentGapRecommendation[] @relation("AssignedContentGaps")
-  createdSEOAudits                SEOAudit[]                 @relation("CreatedSEOAudits")
+  contentLocks                    ContentLock[]              @relation("ContentLocks")
+  createdRevisions                ContentRevision[]          @relation("CreatedRevisions")
+  createdSchedules                ContentSchedule[]          @relation("CreatedSchedules")
+  createdTemplates                ContentTemplate[]          @relation("CreatedTemplates")
+  createdWorkflows                ContentWorkflow[]          @relation("CreatedWorkflows")
+  resolvedDatabaseAlerts          DatabaseAlert[]            @relation("ResolvedDatabaseAlerts")
+  executedDatabaseCleanups        DatabaseCleanupHistory[]   @relation("ExecutedDatabaseCleanups")
+  createdDatabaseOptimizationJobs DatabaseOptimizationJob[]  @relation("CreatedDatabaseOptimizationJobs")
+  createdDevProjects              DevProject[]               @relation("CreatedDevProjects")
+  resolvedDiagnosticAlerts        DiagnosticAlert[]          @relation("ResolvedDiagnosticAlerts")
+  createdDiagnosticJobs           DiagnosticJob[]            @relation("CreatedDiagnosticJobs")
+  executedDiagnostics             DiagnosticResult[]         @relation("ExecutedDiagnostics")
+  resolvedComments                EditorComment[]            @relation("UserResolvedComments")
+  editorComments                  EditorComment[]            @relation("UserEditorComments")
+  editorSessions                  EditorSession[]            @relation("UserEditorSessions")
+  createdExportJobs               ExportJob[]                @relation("CreatedExportJobs")
+  createdFirewallRules            FirewallRule[]             @relation("CreatedFirewallRules")
+  createdImportJobs               ImportJob[]                @relation("CreatedImportJobs")
+  executedResponses               IncidentResponse[]         @relation("ExecutedResponses")
+  createdIpLists                  IpList[]                   @relation("CreatedIpLists")
+  likes                           Like[]
+  loginAttempts                   LoginAttempt[]             @relation("UserLoginAttempts")
+  triggeredMaintenanceExecutions  MaintenanceExecution[]     @relation("TriggeredMaintenanceExecutions")
+  createdMaintenanceTasks         MaintenanceTask[]          @relation("CreatedMaintenanceTasks")
+  authoredMarketplacePlugins      MarketplacePlugin[]        @relation("AuthoredMarketplacePlugins")
+  media                           Media[]
+  uploadedMediaFiles              MediaFile[]                @relation("UploadedMediaFiles")
+  createdMediaFolders             MediaFolder[]              @relation("CreatedMediaFolders")
+  mediaUploadSessions             MediaUploadSession[]       @relation("MediaUploadSessions")
+  notifications                   Notification[]             @relation("UserNotifications")
+  pageViews                       PageView[]                 @relation("UserPageViews")
+  passwordHistory                 PasswordHistory[]          @relation("UserPasswordHistory")
   performanceMetrics              PerformanceMetric[]        @relation("PerformanceMetrics")
+  developedPlugins                PluginDevelopment[]        @relation("DevelopedPlugins")
+  userPluginDownloads             PluginDownload[]           @relation("UserPluginDownloads")
+  userPluginLicenses              PluginLicense[]            @relation("UserPluginLicenses")
+  purchasedPlugins                PluginPurchase[]           @relation("PurchasedPlugins")
+  writtenPluginReviews            PluginReview[]             @relation("WrittenPluginReviews")
+  boughtPlugins                   PluginTransaction[]        @relation("BoughtPlugins")
+  soldPlugins                     PluginTransaction[]        @relation("SoldPlugins")
+  installedPlugins                Plugin[]                   @relation("InstalledPlugins")
+  posts                           Post[]
   rateLimitLogs                   RateLimitLog[]             @relation("RateLimitLogs")
+  executedReports                 ReportExecution[]          @relation("ExecutedReports")
+  createdReports                  Report[]                   @relation("CreatedReports")
+  createdRestoreJobs              RestoreJob[]               @relation("CreatedRestoreJobs")
+  userReviewVotes                 ReviewVote[]               @relation("UserReviewVotes")
+  updatedSecurityConfigs          SecurityConfig[]           @relation("UpdatedSecurityConfigs")
+  resolvedSecurityEvents          SecurityEvent[]            @relation("ResolvedSecurityEvents")
+  securityEvents                  SecurityEvent[]            @relation("UserSecurityEvents")
+  assignedIncidents               SecurityIncident[]         @relation("AssignedIncidents")
+  reportedIncidents               SecurityIncident[]         @relation("ReportedIncidents")
+  resolvedIncidents               SecurityIncident[]         @relation("ResolvedIncidents")
+  createdSEOAudits                SEOAudit[]                 @relation("CreatedSEOAudits")
+  sessions                        Session[]
+  resolvedSystemIssues            SystemIssue[]              @relation("ResolvedSystemIssues")
+  analyticsData                   UserAnalytics[]            @relation("UserAnalyticsData")
+  settings                        UserSetting[]
+  assignedWorkflows               WorkflowInstance[]         @relation("AssignedWorkflows")
+  assignedSteps                   WorkflowStep[]             @relation("AssignedWorkflowSteps")
 
   @@map("users")
 }
@@ -309,57 +309,57 @@ model Analytics {
 }
 
 model Post {
-  id              String          @id @default(cuid())
+  id              String                  @id @default(cuid())
   title           String
-  slug            String          @unique
+  slug            String                  @unique
   excerpt         String?
   content         String
   featuredImage   String?
-  status          PostStatus      @default(DRAFT)
+  status          PostStatus              @default(DRAFT)
   publishedAt     DateTime?
   authorId        String
   categoryId      String?
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
+  createdAt       DateTime                @default(now())
+  updatedAt       DateTime                @updatedAt
   metaTitle       String?
   metaDescription String?
   metaKeywords    String?
   canonicalUrl    String?
-  isHidden        Boolean         @default(false)
-  commentThreads  CommentThread[] @relation("PostCommentThreads")
+  isHidden        Boolean                 @default(false)
+  ruleExecutions  CategoryRuleExecution[]
+  commentThreads  CommentThread[]         @relation("PostCommentThreads")
   comments        Comment[]
   likes           Like[]
   views           PostView[]
-  author          User            @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  category        Category?       @relation(fields: [categoryId], references: [id])
-  tags            Tag[]           @relation("PostToTag")
-  ruleExecutions  CategoryRuleExecution[]
-  seoMetadata     SEOMetadata[]
+  author          User                    @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  category        Category?               @relation(fields: [categoryId], references: [id])
   seoAudits       SEOAudit[]
+  seoMetadata     SEOMetadata[]
+  tags            Tag[]                   @relation("PostToTag")
 
   @@map("posts")
 }
 
 model Category {
-  id              String     @id @default(cuid())
+  id              String               @id @default(cuid())
   name            String
-  slug            String     @unique
+  slug            String               @unique
   description     String?
   parentId        String?
-  createdAt       DateTime   @default(now())
-  updatedAt       DateTime   @updatedAt
-  color           String     @default("#6b7280")
-  isActive        Boolean    @default(true)
+  isActive        Boolean              @default(true)
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+  color           String               @default("#6b7280")
   metaDescription String?
   metaTitle       String?
-  sortOrder       Int        @default(0)
-  parent          Category?  @relation("CategoryParent", fields: [parentId], references: [id])
-  children        Category[] @relation("CategoryParent")
-  posts           Post[]
+  sortOrder       Int                  @default(0)
+  parent          Category?            @relation("CategoryParent", fields: [parentId], references: [id])
+  children        Category[]           @relation("CategoryParent")
   rules           CategoryRule[]
   contentGaps     ContentGapAnalysis[]
-  seoMetadata     SEOMetadata[]
+  posts           Post[]
   seoAudits       SEOAudit[]
+  seoMetadata     SEOMetadata[]
 
   @@map("categories")
 }
@@ -385,18 +385,18 @@ model CategoryTemplate {
 }
 
 model CategoryRule {
-  id          String   @id @default(cuid())
-  name        String
-  categoryId  String
-  conditions  Json     // Store rule conditions as JSON
-  priority    Int      @default(0)
-  isActive    Boolean  @default(true)
-  createdBy   String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  category    Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-  creator     User     @relation("CreatedCategoryRules", fields: [createdBy], references: [id], onDelete: Cascade)
-  executions  CategoryRuleExecution[]
+  id         String                  @id @default(cuid())
+  name       String
+  categoryId String
+  conditions Json
+  priority   Int                     @default(0)
+  isActive   Boolean                 @default(true)
+  createdBy  String
+  createdAt  DateTime                @default(now())
+  updatedAt  DateTime                @updatedAt
+  executions CategoryRuleExecution[]
+  category   Category                @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  creator    User                    @relation("CreatedCategoryRules", fields: [createdBy], references: [id], onDelete: Cascade)
 
   @@index([categoryId])
   @@index([isActive])
@@ -405,14 +405,14 @@ model CategoryRule {
 }
 
 model CategoryRuleExecution {
-  id              String        @id @default(cuid())
+  id              String       @id @default(cuid())
   ruleId          String
   postId          String
-  executionResult Json          // Store execution result as JSON
-  confidenceScore Float         @default(0)
-  executedAt      DateTime      @default(now())
-  rule            CategoryRule  @relation(fields: [ruleId], references: [id], onDelete: Cascade)
-  post            Post          @relation(fields: [postId], references: [id], onDelete: Cascade)
+  executionResult Json
+  confidenceScore Float        @default(0)
+  executedAt      DateTime     @default(now())
+  post            Post         @relation(fields: [postId], references: [id], onDelete: Cascade)
+  rule            CategoryRule @relation(fields: [ruleId], references: [id], onDelete: Cascade)
 
   @@index([ruleId])
   @@index([postId])
@@ -421,26 +421,26 @@ model CategoryRuleExecution {
 }
 
 model ContentGapAnalysis {
-  id              String   @id @default(cuid())
-  categoryId      String?
-  keyword         String
-  searchVolume    Int      @default(0)
-  difficulty      Float    @default(0)
-  opportunity     Float    @default(0)
-  competition     Int      @default(0)
-  existingContent Int      @default(0)
-  recommendedType String   @default("article")
-  priority        String   @default("medium")
-  estimatedTraffic Int     @default(0)
-  estimatedRevenue Float   @default(0)
-  analysisDate    DateTime @default(now())
-  isActive        Boolean  @default(true)
-  createdBy       String
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  category        Category? @relation(fields: [categoryId], references: [id])
-  creator         User     @relation("CreatedContentGaps", fields: [createdBy], references: [id], onDelete: Cascade)
-  recommendations ContentGapRecommendation[]
+  id               String                     @id @default(cuid())
+  categoryId       String?
+  keyword          String
+  searchVolume     Int                        @default(0)
+  difficulty       Float                      @default(0)
+  opportunity      Float                      @default(0)
+  competition      Int                        @default(0)
+  existingContent  Int                        @default(0)
+  recommendedType  String                     @default("article")
+  priority         String                     @default("medium")
+  estimatedTraffic Int                        @default(0)
+  estimatedRevenue Float                      @default(0)
+  analysisDate     DateTime                   @default(now())
+  isActive         Boolean                    @default(true)
+  createdBy        String
+  createdAt        DateTime                   @default(now())
+  updatedAt        DateTime                   @updatedAt
+  category         Category?                  @relation(fields: [categoryId], references: [id])
+  creator          User                       @relation("CreatedContentGaps", fields: [createdBy], references: [id], onDelete: Cascade)
+  recommendations  ContentGapRecommendation[]
 
   @@index([categoryId])
   @@index([keyword])
@@ -450,22 +450,22 @@ model ContentGapAnalysis {
 }
 
 model ContentGapRecommendation {
-  id                String   @id @default(cuid())
-  gapAnalysisId     String
-  title             String
-  description       String
-  contentType       String
-  targetKeywords    Json     // Array of keywords
-  estimatedWordCount Int     @default(1000)
-  estimatedTime     Int      @default(60) // minutes
-  priority          String   @default("medium")
-  status            String   @default("pending")
-  assignedTo        String?
-  completedAt       DateTime?
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-  gapAnalysis       ContentGapAnalysis @relation(fields: [gapAnalysisId], references: [id], onDelete: Cascade)
-  assignee          User?    @relation("AssignedContentGaps", fields: [assignedTo], references: [id])
+  id                 String             @id @default(cuid())
+  gapAnalysisId      String
+  title              String
+  description        String
+  contentType        String
+  targetKeywords     Json
+  estimatedWordCount Int                @default(1000)
+  estimatedTime      Int                @default(60)
+  priority           String             @default("medium")
+  status             String             @default("pending")
+  assignedTo         String?
+  completedAt        DateTime?
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  assignee           User?              @relation("AssignedContentGaps", fields: [assignedTo], references: [id])
+  gapAnalysis        ContentGapAnalysis @relation(fields: [gapAnalysisId], references: [id], onDelete: Cascade)
 
   @@index([gapAnalysisId])
   @@index([status])
@@ -474,28 +474,28 @@ model ContentGapRecommendation {
 }
 
 model SEOMetadata {
-  id              String   @id @default(cuid())
-  postId          String?
-  categoryId      String?
-  pageType        String   @default("post") // post, category, page
-  title           String
-  description     String
-  keywords        String?
-  canonicalUrl    String?
-  ogTitle         String?
-  ogDescription   String?
-  ogImage         String?
-  ogType          String   @default("article")
-  twitterCard     String   @default("summary")
-  twitterTitle    String?
+  id                 String    @id @default(cuid())
+  postId             String?
+  categoryId         String?
+  pageType           String    @default("post")
+  title              String
+  description        String
+  keywords           String?
+  canonicalUrl       String?
+  ogTitle            String?
+  ogDescription      String?
+  ogImage            String?
+  ogType             String    @default("article")
+  twitterCard        String    @default("summary")
+  twitterTitle       String?
   twitterDescription String?
-  twitterImage    String?
-  structuredData  Json?    // JSON-LD structured data
-  metaRobots      String   @default("index,follow")
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  post            Post?    @relation(fields: [postId], references: [id], onDelete: Cascade)
-  category        Category? @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  twitterImage       String?
+  structuredData     Json?
+  metaRobots         String    @default("index,follow")
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  category           Category? @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  post               Post?     @relation(fields: [postId], references: [id], onDelete: Cascade)
 
   @@index([postId])
   @@index([categoryId])
@@ -504,20 +504,20 @@ model SEOMetadata {
 }
 
 model SEOAudit {
-  id              String   @id @default(cuid())
+  id              String    @id @default(cuid())
   postId          String?
   categoryId      String?
-  auditType       String   // onpage, technical, content
-  score           Int      @default(0)
-  issues          Json     // Array of issues found
-  recommendations Json     // Array of recommendations
-  auditDate       DateTime @default(now())
+  auditType       String
+  score           Int       @default(0)
+  issues          Json
+  recommendations Json
+  auditDate       DateTime  @default(now())
   createdBy       String
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  post            Post?    @relation(fields: [postId], references: [id], onDelete: Cascade)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
   category        Category? @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-  creator         User     @relation("CreatedSEOAudits", fields: [createdBy], references: [id], onDelete: Cascade)
+  creator         User      @relation("CreatedSEOAudits", fields: [createdBy], references: [id], onDelete: Cascade)
+  post            Post?     @relation(fields: [postId], references: [id], onDelete: Cascade)
 
   @@index([postId])
   @@index([categoryId])
@@ -527,15 +527,15 @@ model SEOAudit {
 }
 
 model SitemapEntry {
-  id          String   @id @default(cuid())
-  url         String
-  pageType    String   // post, category, page
-  priority    Float    @default(0.5)
-  changeFreq  String   @default("weekly")
+  id           String   @id @default(cuid())
+  url          String
+  pageType     String
+  priority     Float    @default(0.5)
+  changeFreq   String   @default("weekly")
   lastModified DateTime @default(now())
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   @@index([url])
   @@index([pageType])
@@ -544,20 +544,20 @@ model SitemapEntry {
 }
 
 model PerformanceMetric {
-  id              String   @id @default(cuid())
-  metricType      String   // response_time, memory_usage, cpu_usage, cache_hit_rate
-  value           Float
-  unit            String   // ms, mb, percentage
-  endpoint        String?
-  method          String?
-  userId          String?
-  ipAddress       String?
-  userAgent       String?
-  timestamp       DateTime @default(now())
-  metadata        Json?    // Additional context data
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  user            User?    @relation("PerformanceMetrics", fields: [userId], references: [id])
+  id         String   @id @default(cuid())
+  metricType String
+  value      Float
+  unit       String
+  endpoint   String?
+  method     String?
+  userId     String?
+  ipAddress  String?
+  userAgent  String?
+  timestamp  DateTime @default(now())
+  metadata   Json?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  user       User?    @relation("PerformanceMetrics", fields: [userId], references: [id])
 
   @@index([metricType])
   @@index([timestamp])
@@ -566,15 +566,15 @@ model PerformanceMetric {
 }
 
 model CacheEntry {
-  id          String   @id @default(cuid())
-  key         String   @unique
-  value       Json
-  ttl         Int      // Time to live in seconds
-  expiresAt   DateTime
-  hitCount    Int      @default(0)
+  id           String   @id @default(cuid())
+  key          String   @unique
+  value        Json
+  ttl          Int
+  expiresAt    DateTime
+  hitCount     Int      @default(0)
   lastAccessed DateTime @default(now())
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   @@index([key])
   @@index([expiresAt])
@@ -582,16 +582,16 @@ model CacheEntry {
 }
 
 model RateLimitLog {
-  id          String   @id @default(cuid())
-  ipAddress   String
-  endpoint    String
-  method      String
-  userAgent   String?
-  userId      String?
-  blocked     Boolean  @default(false)
-  reason      String?
-  timestamp   DateTime @default(now())
-  user        User?    @relation("RateLimitLogs", fields: [userId], references: [id])
+  id        String   @id @default(cuid())
+  ipAddress String
+  endpoint  String
+  method    String
+  userAgent String?
+  userId    String?
+  blocked   Boolean  @default(false)
+  reason    String?
+  timestamp DateTime @default(now())
+  user      User?    @relation("RateLimitLogs", fields: [userId], references: [id])
 
   @@index([ipAddress])
   @@index([timestamp])
