@@ -1,10 +1,10 @@
 'use client';
 
-
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Search, 
   Upload,
@@ -18,9 +18,12 @@ import {
   Copy,
   MoreHorizontal,
   Grid3X3,
-  List
+  List,
+  Plus
 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { MediaUpload } from '@/components/media/MediaUpload';
+import { MediaPicker } from '@/components/media/MediaPicker';
 
 interface MediaFile {
   id: string;
@@ -43,66 +46,88 @@ export default function MediaPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedType, setSelectedType] = useState<string>('all');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [mediaFiles, setMediaFiles] = useState<MediaFile[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState<'library' | 'upload'>('library');
 
-  // Sample media data
-  const mediaFiles: MediaFile[] = [
-    {
-      id: '1',
-      filename: 'hero-image-1.jpg',
-      originalName: 'hero-image-1.jpg',
-      mimeType: 'image/jpeg',
-      size: 1024000,
-      url: 'https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=400&h=300&fit=crop',
-      alt: 'Hero Image 1',
-      description: 'Main hero image for homepage',
-      uploadedBy: 'John Doe',
-      createdAt: '2024-01-15T10:30:00Z',
-      dimensions: { width: 1920, height: 1080 }
-    },
-    {
-      id: '2',
-      filename: 'document.pdf',
-      originalName: 'document.pdf',
-      mimeType: 'application/pdf',
-      size: 2048000,
-      url: '/api/media/2',
-      uploadedBy: 'Sarah Wilson',
-      createdAt: '2024-01-14T14:20:00Z'
-    },
-    {
-      id: '3',
-      filename: 'video-demo.mp4',
-      originalName: 'video-demo.mp4',
-      mimeType: 'video/mp4',
-      size: 15728640,
-      url: '/api/media/3',
-      description: 'Product demonstration video',
-      uploadedBy: 'Mike Johnson',
-      createdAt: '2024-01-13T16:45:00Z'
-    },
-    {
-      id: '4',
-      filename: 'logo.png',
-      originalName: 'logo.png',
-      mimeType: 'image/png',
-      size: 512000,
-      url: 'https://images.unsplash.com/photo-1516116216624-53e697fedbea?w=400&h=300&fit=crop',
-      alt: 'Company Logo',
-      uploadedBy: 'Emily Brown',
-      createdAt: '2024-01-12T09:15:00Z',
-      dimensions: { width: 512, height: 512 }
-    },
-    {
-      id: '5',
-      filename: 'presentation.pptx',
-      originalName: 'presentation.pptx',
-      mimeType: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-      size: 8192000,
-      url: '/api/media/5',
-      uploadedBy: 'David Miller',
-      createdAt: '2024-01-11T11:30:00Z'
+  // Load media files
+  useEffect(() => {
+    loadMediaFiles();
+  }, []);
+
+  const loadMediaFiles = async () => {
+    setIsLoading(true);
+    try {
+      const response = await fetch('/api/media');
+      if (response.ok) {
+        const data = await response.json();
+        setMediaFiles(data.data?.media || []);
+      }
+    } catch (error) {
+      console.error('Failed to load media files:', error);
+      // Fallback to sample data if API fails
+      setMediaFiles([
+        {
+          id: '1',
+          filename: 'hero-image-1.jpg',
+          originalName: 'hero-image-1.jpg',
+          mimeType: 'image/jpeg',
+          size: 1024000,
+          url: 'https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=400&h=300&fit=crop',
+          alt: 'Hero Image 1',
+          description: 'Main hero image for homepage',
+          uploadedBy: 'John Doe',
+          createdAt: '2024-01-15T10:30:00Z',
+          dimensions: { width: 1920, height: 1080 }
+        },
+        {
+          id: '2',
+          filename: 'document.pdf',
+          originalName: 'document.pdf',
+          mimeType: 'application/pdf',
+          size: 2048000,
+          url: '/api/media/2',
+          uploadedBy: 'Sarah Wilson',
+          createdAt: '2024-01-14T14:20:00Z'
+        },
+        {
+          id: '3',
+          filename: 'video-demo.mp4',
+          originalName: 'video-demo.mp4',
+          mimeType: 'video/mp4',
+          size: 15728640,
+          url: '/api/media/3',
+          description: 'Product demonstration video',
+          uploadedBy: 'Mike Johnson',
+          createdAt: '2024-01-13T16:45:00Z'
+        },
+        {
+          id: '4',
+          filename: 'logo.png',
+          originalName: 'logo.png',
+          mimeType: 'image/png',
+          size: 512000,
+          url: 'https://images.unsplash.com/photo-1516116216624-53e697fedbea?w=400&h=300&fit=crop',
+          alt: 'Company Logo',
+          uploadedBy: 'Emily Brown',
+          createdAt: '2024-01-12T09:15:00Z',
+          dimensions: { width: 512, height: 512 }
+        },
+        {
+          id: '5',
+          filename: 'presentation.pptx',
+          originalName: 'presentation.pptx',
+          mimeType: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+          size: 8192000,
+          url: '/api/media/5',
+          uploadedBy: 'David Miller',
+          createdAt: '2024-01-11T11:30:00Z'
+        }
+      ]);
+    } finally {
+      setIsLoading(false);
     }
-  ];
+  };
 
   const getFileIcon = (mimeType: string) => {
     if (mimeType.startsWith('image/')) return Image;
@@ -265,110 +290,146 @@ export default function MediaPage() {
     </div>
   );
 
+  const handleUploadComplete = (files: any[]) => {
+    // Reload media files after upload
+    loadMediaFiles();
+  };
+
   return (
     <div className="space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Media Library</h1>
-            <p className="text-muted-foreground">
-              Manage your media files and assets
-            </p>
-          </div>
-          <Button>
-            <Upload className="h-4 w-4 mr-2" />
-            Upload Files
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Media Library</h1>
+          <p className="text-muted-foreground">
+            Manage your media files and assets
+          </p>
+        </div>
+        <div className="flex items-center space-x-2">
+          <MediaPicker
+            onSelect={(files) => console.log('Selected files:', files)}
+            trigger={
+              <Button variant="outline">
+                <Image className="h-4 w-4 mr-2" />
+                Select Media
+              </Button>
+            }
+          />
+          <Button onClick={() => setActiveTab('upload')}>
+            <Plus className="h-4 w-4 mr-2" />
+            Upload Media
           </Button>
         </div>
+      </div>
 
-        {/* Filters and Search */}
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex flex-col sm:flex-row gap-4">
-              <div className="flex-1">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Search files..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10"
-                  />
-                </div>
-              </div>
-              <div className="flex gap-2">
-                <Button
-                  variant={selectedType === 'all' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setSelectedType('all')}
-                >
-                  All
-                </Button>
-                <Button
-                  variant={selectedType === 'image' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setSelectedType('image')}
-                >
-                  Images
-                </Button>
-                <Button
-                  variant={selectedType === 'video' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setSelectedType('video')}
-                >
-                  Videos
-                </Button>
-                <Button
-                  variant={selectedType === 'document' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setSelectedType('document')}
-                >
-                  Documents
-                </Button>
-              </div>
-              <div className="flex gap-1">
-                <Button
-                  variant={viewMode === 'grid' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setViewMode('grid')}
-                >
-                  <Grid3X3 className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant={viewMode === 'list' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setViewMode('list')}
-                >
-                  <List className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Media Files */}
-        {filteredFiles.length > 0 ? (
-          viewMode === 'grid' ? renderGridView() : renderListView()
-        ) : (
+      {/* Tabs */}
+      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'library' | 'upload')}>
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="library">Media Library</TabsTrigger>
+          <TabsTrigger value="upload">Upload New</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="library" className="space-y-6">
+          {/* Search and Filters */}
           <Card>
-            <CardContent className="p-12 text-center">
-              <div className="space-y-4">
-                <div className="text-muted-foreground">
-                  <Upload className="h-12 w-12 mx-auto mb-4" />
+            <CardContent className="pt-6">
+              <div className="flex flex-col sm:flex-row gap-4">
+                <div className="flex-1">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search files..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
                 </div>
-                <h3 className="text-lg font-semibold">No files found</h3>
-                <p className="text-muted-foreground">
-                  Try adjusting your search or filter criteria
-                </p>
-                <Button variant="outline">
-                  <Upload className="h-4 w-4 mr-2" />
-                  Upload your first file
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    variant={selectedType === 'all' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setSelectedType('all')}
+                  >
+                    All
+                  </Button>
+                  <Button
+                    variant={selectedType === 'image' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setSelectedType('image')}
+                  >
+                    Images
+                  </Button>
+                  <Button
+                    variant={selectedType === 'video' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setSelectedType('video')}
+                  >
+                    Videos
+                  </Button>
+                  <Button
+                    variant={selectedType === 'document' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setSelectedType('document')}
+                  >
+                    Documents
+                  </Button>
+                </div>
+                <div className="flex gap-1">
+                  <Button
+                    variant={viewMode === 'grid' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setViewMode('grid')}
+                  >
+                    <Grid3X3 className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant={viewMode === 'list' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setViewMode('list')}
+                  >
+                    <List className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </Card>
-        )}
-      </div>
+
+          {/* Media Files */}
+          {isLoading ? (
+            <Card>
+              <CardContent className="p-12 text-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+              </CardContent>
+            </Card>
+          ) : filteredFiles.length > 0 ? (
+            viewMode === 'grid' ? renderGridView() : renderListView()
+          ) : (
+            <Card>
+              <CardContent className="p-12 text-center">
+                <div className="space-y-4">
+                  <div className="text-muted-foreground">
+                    <Upload className="h-12 w-12 mx-auto mb-4" />
+                  </div>
+                  <h3 className="text-lg font-semibold">No files found</h3>
+                  <p className="text-muted-foreground">
+                    Try adjusting your search or filter criteria
+                  </p>
+                  <Button variant="outline" onClick={() => setActiveTab('upload')}>
+                    <Upload className="h-4 w-4 mr-2" />
+                    Upload your first file
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+        
+        <TabsContent value="upload" className="space-y-6">
+          <MediaUpload onUploadComplete={handleUploadComplete} />
+        </TabsContent>
+      </Tabs>
+    </div>
   );
 }
 

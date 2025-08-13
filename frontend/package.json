@@ -23,6 +23,7 @@
     "npm": ">=9.0.0"
   },
   "dependencies": {
+    "react-dropzone": "^14.3.8",
     "react-grid-layout": "^1.5.2"
   },
   "devDependencies": {
