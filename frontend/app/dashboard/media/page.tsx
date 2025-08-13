@@ -19,11 +19,14 @@ import {
   MoreHorizontal,
   Grid3X3,
   List,
-  Plus
+  Plus,
+  Check
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { MediaUpload } from '@/components/media/MediaUpload';
 import { MediaPicker } from '@/components/media/MediaPicker';
+import { BulkOperations } from '@/components/media/BulkOperations';
+import { cn } from '@/lib/cn';
 
 interface MediaFile {
   id: string;
@@ -49,6 +52,7 @@ export default function MediaPage() {
   const [mediaFiles, setMediaFiles] = useState<MediaFile[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'library' | 'upload'>('library');
+  const [selectedFiles, setSelectedFiles] = useState<MediaFile[]>([]);
 
   // Load media files
   useEffect(() => {
@@ -178,8 +182,17 @@ export default function MediaPage() {
         const Icon = getFileIcon(file.mimeType);
         const isImage = file.mimeType.startsWith('image/');
         
+        const isSelected = selectedFiles.some(f => f.id === file.id);
+        
         return (
-          <Card key={file.id} className="group hover:shadow-lg transition-shadow">
+          <Card 
+            key={file.id} 
+            className={cn(
+              "group hover:shadow-lg transition-shadow cursor-pointer",
+              isSelected && "ring-2 ring-primary"
+            )}
+            onClick={() => handleFileSelect(file)}
+          >
             <CardContent className="p-4">
               <div className="aspect-square relative mb-3">
                 {isImage ? (
@@ -193,6 +206,14 @@ export default function MediaPage() {
                     <Icon className="h-8 w-8 text-muted-foreground" />
                   </div>
                 )}
+                
+                {/* Selection Indicator */}
+                {isSelected && (
+                  <div className="absolute top-2 right-2 bg-primary text-primary-foreground rounded-full p-1">
+                    <Check className="h-3 w-3" />
+                  </div>
+                )}
+                
                 <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100">
                   <div className="flex gap-1">
                     <Button variant="secondary" size="sm">
@@ -293,6 +314,38 @@ export default function MediaPage() {
   const handleUploadComplete = (files: any[]) => {
     // Reload media files after upload
     loadMediaFiles();
+  };
+
+  const handleFileSelect = (file: MediaFile) => {
+    setSelectedFiles(prev => {
+      const isSelected = prev.some(f => f.id === file.id);
+      if (isSelected) {
+        return prev.filter(f => f.id !== file.id);
+      } else {
+        return [...prev, file];
+      }
+    });
+  };
+
+  const handleBulkDelete = async (fileIds: string[]) => {
+    // TODO: Implement bulk delete API call
+    console.log('Deleting files:', fileIds);
+    setSelectedFiles([]);
+    loadMediaFiles();
+  };
+
+  const handleBulkDownload = async (fileIds: string[]) => {
+    // TODO: Implement bulk download
+    console.log('Downloading files:', fileIds);
+  };
+
+  const handleBulkCopy = async (fileIds: string[]) => {
+    // TODO: Implement bulk copy
+    console.log('Copying files:', fileIds);
+  };
+
+  const handleClearSelection = () => {
+    setSelectedFiles([]);
   };
 
   return (
@@ -429,6 +482,15 @@ export default function MediaPage() {
           <MediaUpload onUploadComplete={handleUploadComplete} />
         </TabsContent>
       </Tabs>
+
+      {/* Bulk Operations */}
+      <BulkOperations
+        selectedFiles={selectedFiles}
+        onDelete={handleBulkDelete}
+        onDownload={handleBulkDownload}
+        onCopy={handleBulkCopy}
+        onClearSelection={handleClearSelection}
+      />
     </div>
   );
 }
