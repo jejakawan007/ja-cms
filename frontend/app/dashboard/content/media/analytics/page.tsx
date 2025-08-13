@@ -10,7 +10,7 @@ export default function MediaAnalyticsPage() {
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Media Analytics</h1>
         <p className="text-muted-foreground">
-          Track media usage, storage, and performance metrics
+          Advanced analytics and insights for media management
         </p>
       </div>
 

@@ -5,7 +5,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Search, 
   Grid3X3,
@@ -19,11 +18,23 @@ import {
   Download,
   Trash2,
   Copy,
-  MoreHorizontal
+  MoreHorizontal,
+  Upload,
+  FolderPlus,
+  Plus
 } from 'lucide-react';
 import { MediaPicker } from '@/components/media/MediaPicker';
 import { BulkOperations } from '@/components/media/BulkOperations';
 import { FolderManager } from '@/components/media/FolderManager';
+import { MediaUpload } from '@/components/media/MediaUpload';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
 import { cn } from '@/lib/cn';
 
 interface MediaFile {
@@ -37,6 +48,7 @@ interface MediaFile {
   description?: string;
   uploadedBy: string;
   createdAt: string;
+  folderId?: string;
   dimensions?: {
     width: number;
     height: number;
@@ -55,7 +67,7 @@ interface MediaFolder {
   children?: MediaFolder[];
 }
 
-export default function MediaLibraryPage() {
+export default function MediaExplorerPage() {
   const [mediaFiles, setMediaFiles] = useState<MediaFile[]>([]);
   const [selectedFiles, setSelectedFiles] = useState<MediaFile[]>([]);
   const [currentFolder, setCurrentFolder] = useState<MediaFolder | null>(null);
@@ -63,6 +75,7 @@ export default function MediaLibraryPage() {
   const [selectedType, setSelectedType] = useState<string>('all');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [isLoading, setIsLoading] = useState(false);
+  const [showUploadDialog, setShowUploadDialog] = useState(false);
 
   // Load media files
   useEffect(() => {
@@ -145,6 +158,12 @@ export default function MediaLibraryPage() {
 
   const handleClearSelection = () => {
     setSelectedFiles([]);
+  };
+
+  const handleUploadComplete = (files: any[]) => {
+    console.log('Upload completed:', files);
+    setShowUploadDialog(false);
+    loadMediaFiles();
   };
 
   const getFileIcon = (mimeType: string) => {
@@ -339,7 +358,7 @@ export default function MediaLibraryPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Media Library</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Media Explorer</h1>
           <p className="text-muted-foreground">
             {currentFolder ? `In ${currentFolder.name}` : 'All media files'}
           </p>
@@ -354,16 +373,54 @@ export default function MediaLibraryPage() {
               </Button>
             }
           />
+          
+          {/* Upload Dialog */}
+          <Dialog open={showUploadDialog} onOpenChange={setShowUploadDialog}>
+            <DialogTrigger asChild>
+              <Button>
+                <Upload className="h-4 w-4 mr-2" />
+                Upload Files
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-2xl">
+              <DialogHeader>
+                <DialogTitle>Upload Media Files</DialogTitle>
+                <DialogDescription>
+                  Upload and organize your media files. Drag and drop files here or click to browse.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="py-4">
+                <MediaUpload 
+                  onUploadComplete={handleUploadComplete}
+                  multiple={true}
+                  maxFiles={20}
+                  maxSize={50 * 1024 * 1024} // 50MB
+                />
+              </div>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* Folder Manager Sidebar */}
         <div className="lg:col-span-1">
-          <FolderManager
-            currentFolder={currentFolder}
-            onFolderSelect={setCurrentFolder}
-          />
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-lg">Folders</CardTitle>
+                <Button variant="ghost" size="sm">
+                  <FolderPlus className="h-4 w-4" />
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <FolderManager
+                currentFolder={currentFolder}
+                onFolderSelect={setCurrentFolder}
+              />
+            </CardContent>
+          </Card>
         </div>
 
         {/* Main Content */}
@@ -453,6 +510,10 @@ export default function MediaLibraryPage() {
                   <p className="text-muted-foreground">
                     Try adjusting your search or filter criteria
                   </p>
+                  <Button onClick={() => setShowUploadDialog(true)}>
+                    <Upload className="h-4 w-4 mr-2" />
+                    Upload your first file
+                  </Button>
                 </div>
               </CardContent>
             </Card>

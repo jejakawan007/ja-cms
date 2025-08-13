@@ -120,14 +120,12 @@ const navigation: NavigationItem[] = [
   },
   {
     name: 'Media',
-    href: '/dashboard/media',
+    href: '/dashboard/content/media',
     icon: Image,
     current: false,
     children: [
-      { name: 'Library', href: '/dashboard/media/library', icon: Image, current: false },
-      { name: 'Upload', href: '/dashboard/media/upload', icon: Upload, current: false },
-      { name: 'Folders', href: '/dashboard/media/folders', icon: FolderTree, current: false },
-      { name: 'Analytics', href: '/dashboard/media/analytics', icon: BarChart3, current: false },
+      { name: 'Explorer', href: '/dashboard/content/media', icon: Image, current: false },
+      { name: 'Analytics', href: '/dashboard/content/media/analytics', icon: BarChart3, current: false },
     ]
   },
   {
