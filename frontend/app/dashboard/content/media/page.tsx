@@ -25,7 +25,8 @@ import {
   Folder,
   FolderOpen,
   Home,
-  Settings
+  PanelLeftClose,
+  PanelLeftOpen
 } from 'lucide-react';
 import { MediaPicker } from '@/components/media/MediaPicker';
 import { BulkOperations } from '@/components/media/BulkOperations';
@@ -519,14 +520,6 @@ export default function MediaExplorerPage() {
               >
                 <FolderPlus className="h-4 w-4" />
               </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-                className={cn(sidebarCollapsed && "w-8 h-8 p-0")}
-              >
-                <Settings className="h-4 w-4" />
-              </Button>
             </div>
           </div>
         </div>
@@ -541,10 +534,23 @@ export default function MediaExplorerPage() {
         {/* Header */}
         <div className="p-6 border-b">
           <div className="flex items-center justify-between mb-4">
-            <div>
-              <h1 className="text-3xl font-bold tracking-tight">Media Explorer</h1>
-              {/* Breadcrumb */}
-              <div className="flex items-center gap-2 mt-2">
+                        <div className="flex items-center gap-3">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                className="h-8 w-8 p-0"
+              >
+                {sidebarCollapsed ? (
+                  <PanelLeftOpen className="h-4 w-4" />
+                ) : (
+                  <PanelLeftClose className="h-4 w-4" />
+                )}
+              </Button>
+              <div>
+                <h1 className="text-3xl font-bold tracking-tight">Media Explorer</h1>
+                {/* Breadcrumb */}
+                <div className="flex items-center gap-2 mt-2">
                 <Button
                   variant="ghost"
                   size="sm"
