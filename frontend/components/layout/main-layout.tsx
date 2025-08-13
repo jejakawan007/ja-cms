@@ -127,7 +127,7 @@ const navigation: NavigationItem[] = [
       { name: 'Library', href: '/dashboard/media/library', icon: Image, current: false },
       { name: 'Upload', href: '/dashboard/media/upload', icon: Upload, current: false },
       { name: 'Folders', href: '/dashboard/media/folders', icon: FolderTree, current: false },
-      { name: 'Processing', href: '/dashboard/media/processing', icon: Zap, current: false },
+      { name: 'Analytics', href: '/dashboard/media/analytics', icon: BarChart3, current: false },
     ]
   },
   {

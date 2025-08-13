@@ -1,13 +1,16 @@
 'use client';
 
-import { Card, CardContent, CardTitle } from '@/components/ui/card';
+import { useState, useEffect } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Search, 
-  Upload,
+  Grid3X3,
+  List,
+  Check,
   Image,
   File,
   Video,
@@ -16,17 +19,10 @@ import {
   Download,
   Trash2,
   Copy,
-  MoreHorizontal,
-  Grid3X3,
-  List,
-  Plus,
-  Check
+  MoreHorizontal
 } from 'lucide-react';
-import { useState, useEffect } from 'react';
-import { MediaUpload } from '@/components/media/MediaUpload';
 import { MediaPicker } from '@/components/media/MediaPicker';
 import { BulkOperations } from '@/components/media/BulkOperations';
-import { MediaAnalytics } from '@/components/media/MediaAnalytics';
 import { FolderManager } from '@/components/media/FolderManager';
 import { cn } from '@/lib/cn';
 
@@ -47,34 +43,37 @@ interface MediaFile {
   };
 }
 
-export default function MediaPage() {
+interface MediaFolder {
+  id: string;
+  name: string;
+  path: string;
+  parentId?: string;
+  fileCount: number;
+  totalSize: number;
+  createdAt: string;
+  updatedAt: string;
+  children?: MediaFolder[];
+}
+
+export default function MediaLibraryPage() {
+  const [mediaFiles, setMediaFiles] = useState<MediaFile[]>([]);
+  const [selectedFiles, setSelectedFiles] = useState<MediaFile[]>([]);
+  const [currentFolder, setCurrentFolder] = useState<MediaFolder | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedType, setSelectedType] = useState<string>('all');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-  const [mediaFiles, setMediaFiles] = useState<MediaFile[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState<'library' | 'upload' | 'analytics'>('library');
-  const [selectedFiles, setSelectedFiles] = useState<MediaFile[]>([]);
-  const [currentFolder, setCurrentFolder] = useState<any>(null);
-  const [showAnalytics, setShowAnalytics] = useState(false);
 
   // Load media files
   useEffect(() => {
     loadMediaFiles();
-  }, []);
+  }, [currentFolder]);
 
   const loadMediaFiles = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch('/api/media');
-      if (response.ok) {
-        const data = await response.json();
-        setMediaFiles(data.data?.media || []);
-      }
-    } catch (error) {
-      console.error('Failed to load media files:', error);
-      // Fallback to sample data if API fails
-      setMediaFiles([
+      // TODO: Replace with real API call
+      const mockFiles: MediaFile[] = [
         {
           id: '1',
           filename: 'hero-image-1.jpg',
@@ -108,33 +107,44 @@ export default function MediaPage() {
           description: 'Product demonstration video',
           uploadedBy: 'Mike Johnson',
           createdAt: '2024-01-13T16:45:00Z'
-        },
-        {
-          id: '4',
-          filename: 'logo.png',
-          originalName: 'logo.png',
-          mimeType: 'image/png',
-          size: 512000,
-          url: 'https://images.unsplash.com/photo-1516116216624-53e697fedbea?w=400&h=300&fit=crop',
-          alt: 'Company Logo',
-          uploadedBy: 'Emily Brown',
-          createdAt: '2024-01-12T09:15:00Z',
-          dimensions: { width: 512, height: 512 }
-        },
-        {
-          id: '5',
-          filename: 'presentation.pptx',
-          originalName: 'presentation.pptx',
-          mimeType: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-          size: 8192000,
-          url: '/api/media/5',
-          uploadedBy: 'David Miller',
-          createdAt: '2024-01-11T11:30:00Z'
         }
-      ]);
+      ];
+
+      setMediaFiles(mockFiles);
+    } catch (error) {
+      console.error('Failed to load media files:', error);
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleFileSelect = (file: MediaFile) => {
+    setSelectedFiles(prev => {
+      const isSelected = prev.some(f => f.id === file.id);
+      if (isSelected) {
+        return prev.filter(f => f.id !== file.id);
+      } else {
+        return [...prev, file];
+      }
+    });
+  };
+
+  const handleBulkDelete = async (fileIds: string[]) => {
+    console.log('Deleting files:', fileIds);
+    setSelectedFiles([]);
+    loadMediaFiles();
+  };
+
+  const handleBulkDownload = async (fileIds: string[]) => {
+    console.log('Downloading files:', fileIds);
+  };
+
+  const handleBulkCopy = async (fileIds: string[]) => {
+    console.log('Copying files:', fileIds);
+  };
+
+  const handleClearSelection = () => {
+    setSelectedFiles([]);
   };
 
   const getFileIcon = (mimeType: string) => {
@@ -159,10 +169,11 @@ export default function MediaPage() {
   };
 
   const formatFileSize = (bytes: number) => {
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
     if (bytes === 0) return '0 Bytes';
-    const i = Math.floor(Math.log(bytes) / Math.log(1024));
-    return Math.round(bytes / Math.pow(1024, i) * 100) / 100 + ' ' + sizes[i];
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
   const formatDate = (dateString: string) => {
@@ -185,7 +196,6 @@ export default function MediaPage() {
       {filteredFiles.map((file) => {
         const Icon = getFileIcon(file.mimeType);
         const isImage = file.mimeType.startsWith('image/');
-        
         const isSelected = selectedFiles.some(f => f.id === file.id);
         
         return (
@@ -256,9 +266,17 @@ export default function MediaPage() {
       {filteredFiles.map((file) => {
         const Icon = getFileIcon(file.mimeType);
         const isImage = file.mimeType.startsWith('image/');
+        const isSelected = selectedFiles.some(f => f.id === file.id);
         
         return (
-          <Card key={file.id} className="hover:shadow-md transition-shadow">
+          <Card 
+            key={file.id} 
+            className={cn(
+              "hover:shadow-md transition-shadow cursor-pointer",
+              isSelected && "ring-2 ring-primary"
+            )}
+            onClick={() => handleFileSelect(file)}
+          >
             <CardContent className="p-4">
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 flex-shrink-0">
@@ -278,6 +296,7 @@ export default function MediaPage() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
                     <p className="font-medium truncate">{file.originalName}</p>
+                    {isSelected && <Check className="h-4 w-4 text-primary" />}
                     <Badge variant="outline" className="text-xs">
                       {getFileType(file.mimeType)}
                     </Badge>
@@ -315,43 +334,6 @@ export default function MediaPage() {
     </div>
   );
 
-  const handleUploadComplete = (files: any[]) => {
-    // Reload media files after upload
-    loadMediaFiles();
-  };
-
-  const handleFileSelect = (file: MediaFile) => {
-    setSelectedFiles(prev => {
-      const isSelected = prev.some(f => f.id === file.id);
-      if (isSelected) {
-        return prev.filter(f => f.id !== file.id);
-      } else {
-        return [...prev, file];
-      }
-    });
-  };
-
-  const handleBulkDelete = async (fileIds: string[]) => {
-    // TODO: Implement bulk delete API call
-    console.log('Deleting files:', fileIds);
-    setSelectedFiles([]);
-    loadMediaFiles();
-  };
-
-  const handleBulkDownload = async (fileIds: string[]) => {
-    // TODO: Implement bulk download
-    console.log('Downloading files:', fileIds);
-  };
-
-  const handleBulkCopy = async (fileIds: string[]) => {
-    // TODO: Implement bulk copy
-    console.log('Copying files:', fileIds);
-  };
-
-  const handleClearSelection = () => {
-    setSelectedFiles([]);
-  };
-
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -359,7 +341,7 @@ export default function MediaPage() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Media Library</h1>
           <p className="text-muted-foreground">
-            Manage your media files and assets
+            {currentFolder ? `In ${currentFolder.name}` : 'All media files'}
           </p>
         </div>
         <div className="flex items-center space-x-2">
@@ -372,138 +354,111 @@ export default function MediaPage() {
               </Button>
             }
           />
-          <Button onClick={() => setActiveTab('upload')}>
-            <Plus className="h-4 w-4 mr-2" />
-            Upload Media
-          </Button>
         </div>
       </div>
 
-      {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'library' | 'upload' | 'analytics')}>
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="library">Media Library</TabsTrigger>
-          <TabsTrigger value="upload">Upload New</TabsTrigger>
-          <TabsTrigger value="analytics">Analytics</TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="library" className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-            {/* Folder Manager Sidebar */}
-            <div className="lg:col-span-1">
-              <FolderManager
-                currentFolder={currentFolder}
-                onFolderSelect={setCurrentFolder}
-              />
-            </div>
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        {/* Folder Manager Sidebar */}
+        <div className="lg:col-span-1">
+          <FolderManager
+            currentFolder={currentFolder}
+            onFolderSelect={setCurrentFolder}
+          />
+        </div>
 
-            {/* Main Content */}
-            <div className="lg:col-span-3 space-y-6">
-              {/* Search and Filters */}
-              <Card>
-                <CardContent className="pt-6">
-                  <div className="flex flex-col sm:flex-row gap-4">
-                    <div className="flex-1">
-                      <div className="relative">
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <Input
-                          placeholder="Search files..."
-                          value={searchTerm}
-                          onChange={(e) => setSearchTerm(e.target.value)}
-                          className="pl-10"
-                        />
-                      </div>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button
-                        variant={selectedType === 'all' ? 'default' : 'outline'}
-                        size="sm"
-                        onClick={() => setSelectedType('all')}
-                      >
-                        All
-                      </Button>
-                      <Button
-                        variant={selectedType === 'image' ? 'default' : 'outline'}
-                        size="sm"
-                        onClick={() => setSelectedType('image')}
-                      >
-                        Images
-                      </Button>
-                      <Button
-                        variant={selectedType === 'video' ? 'default' : 'outline'}
-                        size="sm"
-                        onClick={() => setSelectedType('video')}
-                      >
-                        Videos
-                      </Button>
-                      <Button
-                        variant={selectedType === 'document' ? 'default' : 'outline'}
-                        size="sm"
-                        onClick={() => setSelectedType('document')}
-                      >
-                        Documents
-                      </Button>
-                    </div>
-                    <div className="flex gap-1">
-                      <Button
-                        variant={viewMode === 'grid' ? 'default' : 'outline'}
-                        size="sm"
-                        onClick={() => setViewMode('grid')}
-                      >
-                        <Grid3X3 className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant={viewMode === 'list' ? 'default' : 'outline'}
-                        size="sm"
-                        onClick={() => setViewMode('list')}
-                      >
-                        <List className="h-4 w-4" />
-                      </Button>
-                    </div>
+        {/* Main Content */}
+        <div className="lg:col-span-3 space-y-6">
+          {/* Search and Filters */}
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex flex-col sm:flex-row gap-4">
+                <div className="flex-1">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search files..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-10"
+                    />
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    variant={selectedType === 'all' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setSelectedType('all')}
+                  >
+                    All
+                  </Button>
+                  <Button
+                    variant={selectedType === 'image' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setSelectedType('image')}
+                  >
+                    Images
+                  </Button>
+                  <Button
+                    variant={selectedType === 'video' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setSelectedType('video')}
+                  >
+                    Videos
+                  </Button>
+                  <Button
+                    variant={selectedType === 'document' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setSelectedType('document')}
+                  >
+                    Documents
+                  </Button>
+                </div>
+                <div className="flex gap-1">
+                  <Button
+                    variant={viewMode === 'grid' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setViewMode('grid')}
+                  >
+                    <Grid3X3 className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant={viewMode === 'list' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setViewMode('list')}
+                  >
+                    <List className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
-              {/* Media Files */}
-              {isLoading ? (
-                <Card>
-                  <CardContent className="p-12 text-center">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-                  </CardContent>
-                </Card>
-              ) : filteredFiles.length > 0 ? (
-                viewMode === 'grid' ? renderGridView() : renderListView()
-              ) : (
-                <Card>
-                  <CardContent className="p-12 text-center">
-                    <div className="space-y-4">
-                      <div className="text-muted-foreground">
-                        <Upload className="h-12 w-12 mx-auto mb-4" />
-                      </div>
-                      <h3 className="text-lg font-semibold">No files found</h3>
-                      <p className="text-muted-foreground">
-                        Try adjusting your search or filter criteria
-                      </p>
-                      <Button variant="outline" onClick={() => setActiveTab('upload')}>
-                        <Upload className="h-4 w-4 mr-2" />
-                        Upload your first file
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-            </div>
-          </div>
-        </TabsContent>
-        
-        <TabsContent value="upload" className="space-y-6">
-          <MediaUpload onUploadComplete={handleUploadComplete} />
-        </TabsContent>
-        
-        <TabsContent value="analytics" className="space-y-6">
-          <MediaAnalytics />
-        </TabsContent>
-      </Tabs>
+          {/* Media Files */}
+          {isLoading ? (
+            <Card>
+              <CardContent className="p-12 text-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+              </CardContent>
+            </Card>
+          ) : filteredFiles.length > 0 ? (
+            viewMode === 'grid' ? renderGridView() : renderListView()
+          ) : (
+            <Card>
+              <CardContent className="p-12 text-center">
+                <div className="space-y-4">
+                  <div className="text-muted-foreground">
+                    <Image className="h-12 w-12 mx-auto mb-4" />
+                  </div>
+                  <h3 className="text-lg font-semibold">No files found</h3>
+                  <p className="text-muted-foreground">
+                    Try adjusting your search or filter criteria
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      </div>
 
       {/* Bulk Operations */}
       <BulkOperations
@@ -516,4 +471,3 @@ export default function MediaPage() {
     </div>
   );
 }
-
