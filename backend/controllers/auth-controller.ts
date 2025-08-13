@@ -152,31 +152,28 @@ export class AuthController {
 
   // Refresh token
   async refreshToken(req: Request, res: Response): Promise<void> {
+    logger.info('Refresh token request received');
+    
     const { refreshToken } = req.body;
-
     if (!refreshToken) {
       throw createValidationError('Refresh token diperlukan');
     }
 
     try {
       const config = getAuthConfig();
-      const decoded = jwt.verify(refreshToken, config.jwtSecret) as JWTPayload & { type: string };
-
+      const decoded = jwt.verify(refreshToken, config.jwtSecret) as JWTPayload;
+      
       if (decoded.type !== 'refresh') {
         throw createUnauthorizedError('Invalid refresh token');
       }
 
-      // Get user
       const user = await this.authService.findUserById(decoded.userId);
       if (!user || !user.isActive) {
-        throw createUnauthorizedError('User tidak ditemukan');
+        throw createUnauthorizedError('User tidak ditemukan atau tidak aktif');
       }
 
-      // Generate new token
       const permissions = getRolePermissions(user.role);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const newTokenOptions: SignOptions = { expiresIn: config.jwtExpiresIn as any };
-      const newToken = jwt.sign(
+      const token = jwt.sign(
         {
           userId: user.id,
           email: user.email,
@@ -184,17 +181,104 @@ export class AuthController {
           permissions,
         },
         config.jwtSecret,
-        newTokenOptions
+        { expiresIn: '7d' }
       );
 
       res.json({
         success: true,
-        data: { token: newToken },
-        message: 'Token berhasil diperbarui',
+        data: { token },
       });
     } catch (error) {
       throw createUnauthorizedError('Invalid refresh token');
     }
+  }
+
+  // Request password reset
+  async requestPasswordReset(req: Request, res: Response): Promise<void> {
+    logger.info('Password reset request received', { email: req.body.email });
+    
+    const { email } = req.body;
+    if (!email) {
+      throw createValidationError('Email diperlukan');
+    }
+
+    const user = await this.authService.findUserByEmail(email);
+    if (!user) {
+      // Don't reveal if user exists or not for security
+      res.json({
+        success: true,
+        message: 'Jika email terdaftar, link reset password akan dikirim',
+      });
+      return;
+    }
+
+    // Generate reset token
+    const resetToken = await this.authService.generatePasswordResetToken(user.id);
+    
+    // TODO: Send email with reset link
+    // For now, just return the token (in production, send via email)
+    res.json({
+      success: true,
+      message: 'Link reset password telah dikirim ke email Anda',
+      data: { resetToken }, // Remove this in production
+    });
+  }
+
+  // Reset password
+  async resetPassword(req: Request, res: Response): Promise<void> {
+    logger.info('Password reset attempt');
+    
+    const { token, newPassword } = req.body;
+    if (!token || !newPassword) {
+      throw createValidationError('Token dan password baru diperlukan');
+    }
+
+    // Validate new password
+    const passwordValidation = validatePassword(newPassword);
+    if (!passwordValidation.isValid) {
+      throw createValidationError(passwordValidation.errors[0] || 'Password tidak valid');
+    }
+
+    const success = await this.authService.resetPasswordWithToken(token, newPassword);
+    if (!success) {
+      throw createUnauthorizedError('Token reset password tidak valid atau sudah kadaluarsa');
+    }
+
+    res.json({
+      success: true,
+      message: 'Password berhasil diubah',
+    });
+  }
+
+  // Change password (for logged in users)
+  async changePassword(req: Request, res: Response): Promise<void> {
+    logger.info('Password change request', { userId: req.user?.userId });
+    
+    const { currentPassword, newPassword } = req.body;
+    if (!currentPassword || !newPassword) {
+      throw createValidationError('Password lama dan baru diperlukan');
+    }
+
+    const userId = req.user?.userId;
+    if (!userId) {
+      throw createUnauthorizedError('User tidak terautentikasi');
+    }
+
+    // Validate new password
+    const passwordValidation = validatePassword(newPassword);
+    if (!passwordValidation.isValid) {
+      throw createValidationError(passwordValidation.errors[0] || 'Password tidak valid');
+    }
+
+    const success = await this.authService.changePassword(userId, currentPassword, newPassword);
+    if (!success) {
+      throw createUnauthorizedError('Password lama tidak benar');
+    }
+
+    res.json({
+      success: true,
+      message: 'Password berhasil diubah',
+    });
   }
 
   // Get current user
@@ -229,33 +313,6 @@ export class AuthController {
       success: true,
       data: user,
       message: 'Profile berhasil diperbarui',
-    });
-  }
-
-  // Change password
-  async changePassword(req: Request, res: Response): Promise<void> {
-    const userId = (req as Request & { user?: { userId: string } }).user?.userId;
-    if (!userId) {
-      throw createUnauthorizedError('User tidak terautentikasi');
-    }
-
-    const { currentPassword, newPassword } = req.body;
-
-    if (!currentPassword || !newPassword) {
-      throw createValidationError('Current password dan new password diperlukan');
-    }
-
-    // Validate new password
-    const passwordValidation = validatePassword(newPassword);
-    if (!passwordValidation.isValid) {
-      throw createValidationError(passwordValidation.errors.join(', '));
-    }
-
-    await this.authService.changePassword(userId, currentPassword, newPassword);
-
-    res.json({
-      success: true,
-      message: 'Password berhasil diubah',
     });
   }
 } 

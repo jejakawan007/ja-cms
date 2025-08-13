@@ -200,4 +200,60 @@ router.put('/profile', authenticateToken, asyncHandler(authController.updateProf
  */
 router.post('/change-password', authenticateToken, asyncHandler(authController.changePassword.bind(authController)));
 
+/**
+ * @swagger
+ * /api/auth/request-password-reset:
+ *   post:
+ *     summary: Request password reset
+ *     tags: [Authentication]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *     responses:
+ *       200:
+ *         description: Password reset email sent
+ *       400:
+ *         description: Validation error
+ */
+router.post('/request-password-reset', asyncHandler(authController.requestPasswordReset.bind(authController)));
+
+/**
+ * @swagger
+ * /api/auth/reset-password:
+ *   post:
+ *     summary: Reset password with token
+ *     tags: [Authentication]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - token
+ *               - newPassword
+ *             properties:
+ *               token:
+ *                 type: string
+ *               newPassword:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Password reset successfully
+ *       400:
+ *         description: Validation error
+ *       401:
+ *         description: Invalid or expired token
+ */
+router.post('/reset-password', asyncHandler(authController.resetPassword.bind(authController)));
+
 export default router; 
