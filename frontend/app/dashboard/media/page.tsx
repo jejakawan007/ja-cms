@@ -26,6 +26,8 @@ import { useState, useEffect } from 'react';
 import { MediaUpload } from '@/components/media/MediaUpload';
 import { MediaPicker } from '@/components/media/MediaPicker';
 import { BulkOperations } from '@/components/media/BulkOperations';
+import { MediaAnalytics } from '@/components/media/MediaAnalytics';
+import { FolderManager } from '@/components/media/FolderManager';
 import { cn } from '@/lib/cn';
 
 interface MediaFile {
@@ -51,8 +53,10 @@ export default function MediaPage() {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [mediaFiles, setMediaFiles] = useState<MediaFile[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState<'library' | 'upload'>('library');
+  const [activeTab, setActiveTab] = useState<'library' | 'upload' | 'analytics'>('library');
   const [selectedFiles, setSelectedFiles] = useState<MediaFile[]>([]);
+  const [currentFolder, setCurrentFolder] = useState<any>(null);
+  const [showAnalytics, setShowAnalytics] = useState(false);
 
   // Load media files
   useEffect(() => {
@@ -376,110 +380,128 @@ export default function MediaPage() {
       </div>
 
       {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'library' | 'upload')}>
-        <TabsList className="grid w-full grid-cols-2">
+      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'library' | 'upload' | 'analytics')}>
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="library">Media Library</TabsTrigger>
           <TabsTrigger value="upload">Upload New</TabsTrigger>
+          <TabsTrigger value="analytics">Analytics</TabsTrigger>
         </TabsList>
         
         <TabsContent value="library" className="space-y-6">
-          {/* Search and Filters */}
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex flex-col sm:flex-row gap-4">
-                <div className="flex-1">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      placeholder="Search files..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-10"
-                    />
-                  </div>
-                </div>
-                <div className="flex gap-2">
-                  <Button
-                    variant={selectedType === 'all' ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setSelectedType('all')}
-                  >
-                    All
-                  </Button>
-                  <Button
-                    variant={selectedType === 'image' ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setSelectedType('image')}
-                  >
-                    Images
-                  </Button>
-                  <Button
-                    variant={selectedType === 'video' ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setSelectedType('video')}
-                  >
-                    Videos
-                  </Button>
-                  <Button
-                    variant={selectedType === 'document' ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setSelectedType('document')}
-                  >
-                    Documents
-                  </Button>
-                </div>
-                <div className="flex gap-1">
-                  <Button
-                    variant={viewMode === 'grid' ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setViewMode('grid')}
-                  >
-                    <Grid3X3 className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant={viewMode === 'list' ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setViewMode('list')}
-                  >
-                    <List className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            {/* Folder Manager Sidebar */}
+            <div className="lg:col-span-1">
+              <FolderManager
+                currentFolder={currentFolder}
+                onFolderSelect={setCurrentFolder}
+              />
+            </div>
 
-          {/* Media Files */}
-          {isLoading ? (
-            <Card>
-              <CardContent className="p-12 text-center">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-              </CardContent>
-            </Card>
-          ) : filteredFiles.length > 0 ? (
-            viewMode === 'grid' ? renderGridView() : renderListView()
-          ) : (
-            <Card>
-              <CardContent className="p-12 text-center">
-                <div className="space-y-4">
-                  <div className="text-muted-foreground">
-                    <Upload className="h-12 w-12 mx-auto mb-4" />
+            {/* Main Content */}
+            <div className="lg:col-span-3 space-y-6">
+              {/* Search and Filters */}
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="flex flex-col sm:flex-row gap-4">
+                    <div className="flex-1">
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          placeholder="Search files..."
+                          value={searchTerm}
+                          onChange={(e) => setSearchTerm(e.target.value)}
+                          className="pl-10"
+                        />
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        variant={selectedType === 'all' ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setSelectedType('all')}
+                      >
+                        All
+                      </Button>
+                      <Button
+                        variant={selectedType === 'image' ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setSelectedType('image')}
+                      >
+                        Images
+                      </Button>
+                      <Button
+                        variant={selectedType === 'video' ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setSelectedType('video')}
+                      >
+                        Videos
+                      </Button>
+                      <Button
+                        variant={selectedType === 'document' ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setSelectedType('document')}
+                      >
+                        Documents
+                      </Button>
+                    </div>
+                    <div className="flex gap-1">
+                      <Button
+                        variant={viewMode === 'grid' ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setViewMode('grid')}
+                      >
+                        <Grid3X3 className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant={viewMode === 'list' ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setViewMode('list')}
+                      >
+                        <List className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
-                  <h3 className="text-lg font-semibold">No files found</h3>
-                  <p className="text-muted-foreground">
-                    Try adjusting your search or filter criteria
-                  </p>
-                  <Button variant="outline" onClick={() => setActiveTab('upload')}>
-                    <Upload className="h-4 w-4 mr-2" />
-                    Upload your first file
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          )}
+                </CardContent>
+              </Card>
+
+              {/* Media Files */}
+              {isLoading ? (
+                <Card>
+                  <CardContent className="p-12 text-center">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+                  </CardContent>
+                </Card>
+              ) : filteredFiles.length > 0 ? (
+                viewMode === 'grid' ? renderGridView() : renderListView()
+              ) : (
+                <Card>
+                  <CardContent className="p-12 text-center">
+                    <div className="space-y-4">
+                      <div className="text-muted-foreground">
+                        <Upload className="h-12 w-12 mx-auto mb-4" />
+                      </div>
+                      <h3 className="text-lg font-semibold">No files found</h3>
+                      <p className="text-muted-foreground">
+                        Try adjusting your search or filter criteria
+                      </p>
+                      <Button variant="outline" onClick={() => setActiveTab('upload')}>
+                        <Upload className="h-4 w-4 mr-2" />
+                        Upload your first file
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          </div>
         </TabsContent>
         
         <TabsContent value="upload" className="space-y-6">
           <MediaUpload onUploadComplete={handleUploadComplete} />
+        </TabsContent>
+        
+        <TabsContent value="analytics" className="space-y-6">
+          <MediaAnalytics />
         </TabsContent>
       </Tabs>
 
