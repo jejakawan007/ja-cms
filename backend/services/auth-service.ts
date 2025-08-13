@@ -54,25 +54,99 @@ export class AuthService {
   }
 
   // Change password
-  async changePassword(userId: string, _currentPassword: string, _newPassword: string): Promise<void> {
-    // Get current user with password (using raw query or separate method)
+  async changePassword(userId: string, currentPassword: string, newPassword: string): Promise<boolean> {
+    const config = getAuthConfig();
+    
+    // Get user with password
     const user = await this.userModel.findById(userId);
     if (!user) {
       throw new Error('User tidak ditemukan');
     }
 
-    // Note: Password verification should be handled by a separate method
-    // that can access the password field from the database
-    // For now, we'll skip password verification in this method
-    
-    // Hash new password
-    // const config = getAuthConfig();
-    // const _hashedPassword = await bcrypt.hash(newPassword, config.bcryptRounds);
+    // Get user with password for verification
+    const userWithPassword = await this.userModel.findByEmailWithPassword(user.email);
+    if (!userWithPassword) {
+      throw new Error('User tidak ditemukan');
+    }
 
-    // Update password using a separate method that can handle password updates
-    // This would require extending the UserModel to handle password updates
-    throw new Error('Password update not implemented - requires UserModel extension');
+    // Verify current password
+    const isCurrentPasswordValid = await bcrypt.compare(currentPassword, userWithPassword.password);
+    if (!isCurrentPasswordValid) {
+      return false;
+    }
+
+    // Hash new password
+    const hashedNewPassword = await bcrypt.hash(newPassword, config.bcryptRounds);
+
+    // Update password
+    await this.userModel.updatePassword(userId, hashedNewPassword);
+    return true;
   }
+
+  // Generate password reset token
+  async generatePasswordResetToken(userId: string): Promise<string> {
+    const config = getAuthConfig();
+    
+    // Generate random token
+    const resetToken = require('crypto').randomBytes(32).toString('hex');
+    
+    // Hash token for storage
+    const hashedToken = await bcrypt.hash(resetToken, config.bcryptRounds);
+    
+    // Store hashed token with expiration (1 hour)
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+    
+    // TODO: Store reset token in database
+    // For now, we'll use a simple in-memory store (not production ready)
+    this.resetTokens.set(resetToken, {
+      userId,
+      hashedToken,
+      expiresAt,
+    });
+    
+    return resetToken;
+  }
+
+  // Reset password with token
+  async resetPasswordWithToken(token: string, newPassword: string): Promise<boolean> {
+    const config = getAuthConfig();
+    
+    // Get stored reset token data
+    const resetData = this.resetTokens.get(token);
+    if (!resetData) {
+      return false;
+    }
+
+    // Check if token is expired
+    if (new Date() > resetData.expiresAt) {
+      this.resetTokens.delete(token);
+      return false;
+    }
+
+    // Verify token
+    const isValidToken = await bcrypt.compare(token, resetData.hashedToken);
+    if (!isValidToken) {
+      return false;
+    }
+
+    // Hash new password
+    const hashedNewPassword = await bcrypt.hash(newPassword, config.bcryptRounds);
+
+    // Update password
+    await this.userModel.updatePassword(resetData.userId, hashedNewPassword);
+    
+    // Remove used token
+    this.resetTokens.delete(token);
+    
+    return true;
+  }
+
+  // In-memory store for reset tokens (replace with database in production)
+  private resetTokens = new Map<string, {
+    userId: string;
+    hashedToken: string;
+    expiresAt: Date;
+  }>();
 
   // Verify password
   async verifyPassword(userId: string, password: string): Promise<boolean> {
