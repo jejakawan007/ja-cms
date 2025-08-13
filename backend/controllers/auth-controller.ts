@@ -181,7 +181,7 @@ export class AuthController {
           permissions,
         },
         config.jwtSecret,
-        { expiresIn: config.jwtExpiresIn }
+        { expiresIn: '7d' }
       );
 
       res.json({
@@ -236,7 +236,7 @@ export class AuthController {
     // Validate new password
     const passwordValidation = validatePassword(newPassword);
     if (!passwordValidation.isValid) {
-      throw createValidationError(passwordValidation.message);
+      throw createValidationError(passwordValidation.errors[0] || 'Password tidak valid');
     }
 
     const success = await this.authService.resetPasswordWithToken(token, newPassword);
@@ -267,7 +267,7 @@ export class AuthController {
     // Validate new password
     const passwordValidation = validatePassword(newPassword);
     if (!passwordValidation.isValid) {
-      throw createValidationError(passwordValidation.message);
+      throw createValidationError(passwordValidation.errors[0] || 'Password tidak valid');
     }
 
     const success = await this.authService.changePassword(userId, currentPassword, newPassword);
