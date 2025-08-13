@@ -62,7 +62,7 @@ export function FeaturedImagePicker({
 
   const handleImageSelect = (files: MediaFile[]) => {
     if (files.length > 0) {
-      onChange?.(files[0]);
+      onChange?.(files[0] || null);
     }
   };
 

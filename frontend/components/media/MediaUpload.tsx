@@ -27,13 +27,13 @@ interface MediaUploadProps {
   className?: string;
 }
 
-export function MediaUpload({
+export function MediaUpload({ 
   onUploadComplete,
   multiple = true,
   maxFiles = 10,
   maxSize = 10 * 1024 * 1024, // 10MB
   acceptedTypes = ['image/*', 'video/*', 'application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.*'],
-  className
+  className 
 }: MediaUploadProps) {
   const [uploadFiles, setUploadFiles] = useState<UploadFile[]>([]);
   const [isUploading, setIsUploading] = useState(false);
@@ -41,8 +41,8 @@ export function MediaUpload({
   const onDrop = useCallback((acceptedFiles: File[]) => {
     const newFiles: UploadFile[] = acceptedFiles.map((file, index) => ({
       id: `${Date.now()}-${index}`,
-      file,
-      progress: 0,
+        file,
+        progress: 0,
       status: 'uploading' as const,
       preview: file.type.startsWith('image/') ? URL.createObjectURL(file) : undefined
     }));
@@ -71,7 +71,7 @@ export function MediaUpload({
 
         // Simulate upload progress
         const progressInterval = setInterval(() => {
-          setUploadFiles(prev => prev.map(f => 
+            setUploadFiles(prev => prev.map(f => 
             f.id === uploadFile.id 
               ? { ...f, progress: Math.min(f.progress + 10, 90) }
               : f
@@ -139,7 +139,7 @@ export function MediaUpload({
         <CardContent className="p-6">
           <div
             {...getRootProps()}
-            className={cn(
+          className={cn(
               "border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors",
               isDragActive 
                 ? "border-primary bg-primary/5" 
@@ -147,16 +147,16 @@ export function MediaUpload({
             )}
           >
             <input {...getInputProps()} />
-            <Upload className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+          <Upload className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
             <h3 className="text-lg font-medium mb-2">
               {isDragActive ? 'Drop files here' : 'Drag & drop files here'}
-            </h3>
+          </h3>
             <p className="text-sm text-muted-foreground mb-4">
               or click to select files
             </p>
             <div className="text-xs text-muted-foreground space-y-1">
               <p>Max file size: {formatFileSize(maxSize)}</p>
-              <p>Max files: {maxFiles}</p>
+            <p>Max files: {maxFiles}</p>
               <p>Accepted types: Images, Videos, Documents</p>
             </div>
           </div>
@@ -164,7 +164,7 @@ export function MediaUpload({
       </Card>
 
       {/* Upload Progress */}
-      {uploadFiles.length > 0 && (
+        {uploadFiles.length > 0 && (
         <Card>
           <CardContent className="p-4">
             <h4 className="font-medium mb-4">Upload Progress</h4>
@@ -210,7 +210,7 @@ export function MediaUpload({
                         </Button>
                       </div>
                     </div>
-                    
+
                     {/* Progress Bar */}
                     <Progress value={uploadFile.progress} className="h-2" />
                     
@@ -260,8 +260,8 @@ export function MediaUpload({
               Retry Failed
             </Button>
           )}
-        </div>
-      )}
+          </div>
+        )}
     </div>
   );
 }

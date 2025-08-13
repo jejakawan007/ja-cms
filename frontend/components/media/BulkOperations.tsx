@@ -10,7 +10,6 @@ import {
   Move, 
   Tag,
   MoreHorizontal,
-  Check,
   X
 } from 'lucide-react';
 import {

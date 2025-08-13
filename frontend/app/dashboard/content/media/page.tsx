@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -25,8 +25,7 @@ import {
   Folder,
   FolderOpen,
   Home,
-  PanelLeftClose,
-  PanelLeftOpen
+  Sidebar
 } from 'lucide-react';
 import { MediaPicker } from '@/components/media/MediaPicker';
 import { BulkOperations } from '@/components/media/BulkOperations';
@@ -39,11 +38,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from '@/components/ui/collapsible';
+
 import { cn } from '@/lib/cn';
 
 interface MediaFile {
@@ -207,12 +202,12 @@ export default function MediaExplorerPage() {
     }
     
     const path: MediaFolder[] = [];
-    let current = folder;
+    let current: MediaFolder | null = folder;
     
     // Build path from root to current folder
     while (current) {
       path.unshift(current);
-      const parent = folders.find(f => f.id === current.parentId);
+      const parent = folders.find(f => f.id === current!.parentId);
       current = parent || null;
     }
     
@@ -533,51 +528,9 @@ export default function MediaExplorerPage() {
       <div className="flex-1 flex flex-col">
         {/* Header */}
         <div className="p-6 border-b">
+          {/* Title */}
           <div className="flex items-center justify-between mb-4">
-                        <div className="flex items-center gap-3">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-                className="h-8 w-8 p-0"
-              >
-                {sidebarCollapsed ? (
-                  <PanelLeftOpen className="h-4 w-4" />
-                ) : (
-                  <PanelLeftClose className="h-4 w-4" />
-                )}
-              </Button>
-              <div>
-                <h1 className="text-3xl font-bold tracking-tight">Media Explorer</h1>
-                {/* Breadcrumb */}
-                <div className="flex items-center gap-2 mt-2">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    setCurrentFolder(null);
-                    setFolderPath([]);
-                  }}
-                  className="h-6 px-2"
-                >
-                  <Home className="h-3 w-3 mr-1" />
-                  Home
-                </Button>
-                {folderPath.map((folder, index) => (
-                  <div key={folder.id} className="flex items-center gap-2">
-                    <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleBreadcrumbClick(folder)}
-                      className="h-6 px-2"
-                    >
-                      {folder.name}
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            </div>
+            <h1 className="text-3xl font-bold tracking-tight">Media Explorer</h1>
             
             <div className="flex items-center space-x-2">
               <MediaPicker
@@ -615,6 +568,46 @@ export default function MediaExplorerPage() {
                   </div>
                 </DialogContent>
               </Dialog>
+            </div>
+          </div>
+
+          {/* Breadcrumb with Collapse Button */}
+          <div className="flex items-center gap-3">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+              className="h-8 w-8 p-0"
+            >
+              <Sidebar className="h-4 w-4" />
+            </Button>
+            
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setCurrentFolder(null);
+                  setFolderPath([]);
+                }}
+                className="h-6 px-2"
+              >
+                <Home className="h-3 w-3 mr-1" />
+                Home
+              </Button>
+              {folderPath.map((folder) => (
+                <div key={folder.id} className="flex items-center gap-2">
+                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleBreadcrumbClick(folder)}
+                    className="h-6 px-2"
+                  >
+                    {folder.name}
+                  </Button>
+                </div>
+              ))}
             </div>
           </div>
 

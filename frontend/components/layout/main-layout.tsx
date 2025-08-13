@@ -30,8 +30,6 @@ import {
   Puzzle,
   FolderOpen,
   MessageSquare,
-  Upload,
-  FolderTree,
   Eye,
   BarChart,
   Brain,
