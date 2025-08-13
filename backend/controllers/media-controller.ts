@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { MediaService } from '../services/media-service';
 import { logger } from '../utils/logger';
+import { JWTPayload } from '@shared/types';
 
 export class MediaController {
 
@@ -18,6 +19,10 @@ export class MediaController {
         sortOrder = 'desc' 
       } = req.query;
 
+      // Validate and sanitize sortBy to prevent invalid field errors
+      const validSortFields = ['createdAt', 'updatedAt', 'filename', 'originalName', 'size', 'mimeType'];
+      const sanitizedSortBy = validSortFields.includes(sortBy as string) ? sortBy as string : 'createdAt';
+
       const media = await MediaService.getAllMedia({
         page: Number(page),
         limit: Number(limit),
@@ -25,13 +30,14 @@ export class MediaController {
         type: type as string,
         folderId: folderId as string,
         uploaderId: uploaderId as string,
-        sortBy: sortBy as string,
+        sortBy: sanitizedSortBy,
         sortOrder: sortOrder as 'asc' | 'desc'
       });
       
       res.status(200).json({
         success: true,
-        data: media,
+        data: media.data,
+        pagination: media.pagination,
         message: 'Media files retrieved successfully',
       });
     } catch (error) {
@@ -84,7 +90,7 @@ export class MediaController {
         });
       }
 
-      const uploadedBy = (req as unknown as { user?: { id: string } }).user?.id;
+      const uploadedBy = (req as Request & { user?: JWTPayload }).user?.userId;
       if (!uploadedBy) {
         return res.status(401).json({
           success: false,
@@ -168,7 +174,7 @@ export class MediaController {
   // Get media analytics
   static async getMediaAnalytics(req: Request, res: Response) {
     try {
-      const userId = (req as any).user?.id;
+      const userId = (req as unknown as { user?: { id: string } }).user?.id;
       const analytics = await MediaService.getMediaAnalytics(userId);
       
       res.status(200).json({
@@ -275,7 +281,7 @@ export class MediaController {
 
       const results = await Promise.allSettled(uploadPromises);
       
-      const successful = results.filter(r => r.status === 'fulfilled').map(r => (r as PromiseFulfilledResult<any>).value);
+      const successful = results.filter(r => r.status === 'fulfilled').map(r => (r as PromiseFulfilledResult<unknown>).value);
       const failed = results.filter(r => r.status === 'rejected').map(r => (r as PromiseRejectedResult).reason);
       
       return res.status(200).json({
@@ -423,6 +429,148 @@ export class MediaController {
       res.status(500).json({
         success: false,
         error: 'Failed to retrieve top uploaders',
+        message: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  }
+
+  // Get all folders
+  static async getAllFolders(_req: Request, res: Response) {
+    try {
+      const folders = await MediaService.getAllFolders();
+      
+      res.status(200).json({
+        success: true,
+        data: folders,
+        message: 'Media folders retrieved successfully',
+      });
+    } catch (error) {
+      logger.error('Error in getAllFolders:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to retrieve media folders',
+        message: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  }
+
+  // Create folder
+  static async createFolder(req: Request, res: Response) {
+    try {
+      const { name, description, parentId, isPublic } = req.body;
+      const createdBy = (req as Request & { user?: JWTPayload }).user?.userId;
+      
+      if (!createdBy) {
+        return res.status(401).json({
+          success: false,
+          error: 'User not authenticated',
+          message: 'Authentication required'
+        });
+      }
+
+      if (!name) {
+        return res.status(400).json({
+          success: false,
+          error: 'Folder name required',
+          message: 'Please provide a folder name',
+        });
+      }
+
+      const folder = await MediaService.createFolder({
+        name,
+        description,
+        parentId,
+        isPublic: isPublic || false,
+        createdBy
+      });
+      
+      res.status(201).json({
+        success: true,
+        data: folder,
+        message: 'Media folder created successfully',
+      });
+    } catch (error) {
+      logger.error('Error in createFolder:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to create media folder',
+        message: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  }
+
+  // Get folder by ID
+  static async getFolderById(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+      const folder = await MediaService.getFolderById(id);
+      
+      if (!folder) {
+        return res.status(404).json({
+          success: false,
+          error: 'Folder not found',
+          message: 'Media folder with the specified ID was not found',
+        });
+      }
+      
+      res.status(200).json({
+        success: true,
+        data: folder,
+        message: 'Media folder retrieved successfully',
+      });
+    } catch (error) {
+      logger.error('Error in getFolderById:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to retrieve media folder',
+        message: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  }
+
+  // Update folder
+  static async updateFolder(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+      const { name, description, parentId, isPublic } = req.body;
+
+      const folder = await MediaService.updateFolder(id, {
+        name,
+        description,
+        parentId,
+        isPublic
+      });
+
+      res.status(200).json({
+        success: true,
+        data: folder,
+        message: 'Media folder updated successfully',
+      });
+    } catch (error) {
+      logger.error('Error in updateFolder:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to update media folder',
+        message: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  }
+
+  // Delete folder
+  static async deleteFolder(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+      await MediaService.deleteFolder(id);
+
+      res.status(200).json({
+        success: true,
+        message: 'Media folder deleted successfully',
+      });
+    } catch (error) {
+      logger.error('Error in deleteFolder:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to delete media folder',
         message: error instanceof Error ? error.message : 'Unknown error',
       });
     }

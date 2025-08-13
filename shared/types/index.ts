@@ -129,6 +129,7 @@ export interface JWTPayload {
   permissions: string[];
   iat: number;
   exp: number;
+  type?: 'refresh' | 'access';
 }
 
 export interface LoginRequest {

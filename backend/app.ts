@@ -6,6 +6,7 @@ import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
 import swaggerJsdoc from 'swagger-jsdoc';
 import swaggerUi from 'swagger-ui-express';
+import path from 'path';
 
 // Import middleware
 import { errorHandler } from '@/middleware/error-handler';
@@ -115,7 +116,7 @@ app.use(limiter);
 app.use(requestLogger);
 
 // Static files
-app.use('/uploads', express.static('uploads'));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Health check
 app.get('/health', (_req, res) => {
@@ -206,8 +207,15 @@ process.on('uncaughtException', (error) => {
 });
 
 process.on('unhandledRejection', (reason, promise) => {
-  logger.error('Unhandled Rejection at:', promise, 'reason:', reason);
-  process.exit(1);
+  logger.error('Unhandled Rejection at:', promise);
+  logger.error('Reason:', reason);
+  if (reason instanceof Error) {
+    logger.error('Stack:', reason.stack);
+  }
+  // Don't exit in development, just log the error
+  if (process.env['NODE_ENV'] === 'production') {
+    process.exit(1);
+  }
 });
 
 startServer();

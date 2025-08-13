@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { FeaturedImagePicker } from '@/components/media/FeaturedImagePicker';
 
 interface Category {
   id: string;
@@ -35,6 +36,23 @@ interface Tag {
   id: string;
   name: string;
   slug: string;
+}
+
+interface MediaFile {
+  id: string;
+  filename: string;
+  originalName: string;
+  mimeType: string;
+  size: number;
+  url: string;
+  alt?: string;
+  description?: string;
+  uploadedBy: string;
+  createdAt: string;
+  dimensions?: {
+    width: number;
+    height: number;
+  };
 }
 
 export default function CreatePostPage() {
@@ -54,7 +72,8 @@ export default function CreatePostPage() {
     status: 'DRAFT' as 'DRAFT' | 'PUBLISHED' | 'SCHEDULED',
     categoryId: '',
     tags: [] as string[],
-    featuredImage: '',
+    featuredImage: null as MediaFile | null,
+    featuredImageAlt: '',
     publishedAt: '',
     seoTitle: '',
     seoDescription: '',
@@ -228,8 +247,8 @@ export default function CreatePostPage() {
       };
 
       // Only include featuredImage if it has a value
-      if (formData.featuredImage && formData.featuredImage.trim()) {
-        postData.featuredImage = formData.featuredImage.trim();
+      if (formData.featuredImage) {
+        postData.featuredImage = formData.featuredImage.id;
       }
 
       console.log('Submitting post data:', postData);
@@ -562,38 +581,16 @@ export default function CreatePostPage() {
                   Featured Image
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="featuredImage" className="text-sm font-medium text-foreground">Image URL</Label>
-                  <Input
-                    id="featuredImage"
-                    value={formData.featuredImage}
-                    onChange={(e) => setFormData(prev => ({ ...prev, featuredImage: e.target.value }))}
-                    placeholder="https://example.com/image.jpg"
-                    className="border-border bg-background text-foreground placeholder:text-muted-foreground focus:border-primary"
-                  />
-                </div>
-                
-                {formData.featuredImage && (
-                  <div className="aspect-video bg-muted rounded-lg overflow-hidden">
-                    <img
-                      src={formData.featuredImage}
-                      alt="Featured"
-                      className="w-full h-full object-cover"
-                      onError={(e) => {
-                        e.currentTarget.style.display = 'none';
-                      }}
-                    />
-                  </div>
-                )}
-                
-                <Button 
-                  variant="outline" 
-                  className="w-full border-border text-foreground hover:bg-muted/50 transition-colors"
-                >
-                  <Image className="h-4 w-4 mr-2" />
-                  Choose Image
-                </Button>
+              <CardContent>
+                <FeaturedImagePicker
+                  value={formData.featuredImage}
+                  onChange={(media) => setFormData(prev => ({ ...prev, featuredImage: media }))}
+                  alt={formData.featuredImageAlt}
+                  onAltChange={(alt) => setFormData(prev => ({ ...prev, featuredImageAlt: alt }))}
+                  aspectRatio={16/9}
+                  maxWidth={1200}
+                  maxHeight={675}
+                />
               </CardContent>
             </Card>
 

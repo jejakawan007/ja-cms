@@ -153,6 +153,18 @@ export class UserModel {
     }
   }
 
+  // Update password
+  async updatePassword(userId: string, hashedPassword: string): Promise<void> {
+    try {
+      await this.prisma.user.update({
+        where: { id: userId },
+        data: { password: hashedPassword },
+      });
+    } catch (error) {
+      throw new Error('Failed to update password');
+    }
+  }
+
   // Delete user
   async delete(id: string): Promise<void> {
     try {

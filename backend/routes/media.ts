@@ -134,6 +134,15 @@ const upload = multer({
  */
 router.get('/', authenticateToken, MediaController.getAllMedia);
 
+// Specific routes MUST come before parameterized routes to avoid conflicts
+router.get('/stats', authenticateToken, MediaController.getMediaStats);
+router.get('/folders', authenticateToken, MediaController.getAllFolders);
+router.post('/folders', authenticateToken, MediaController.createFolder);
+router.get('/folders/:id', authenticateToken, MediaController.getFolderById);
+router.put('/folders/:id', authenticateToken, MediaController.updateFolder);
+router.delete('/folders/:id', authenticateToken, MediaController.deleteFolder);
+router.get('/folders/:id/files', authenticateToken, MediaController.getMediaByFolder);
+
 /**
  * @swagger
  * /api/media/{id}:
@@ -340,5 +349,13 @@ router.delete('/:id', authenticateToken, MediaController.deleteMedia);
  *         description: Internal server error
  */
 router.get('/stats', authenticateToken, MediaController.getMediaStats);
+
+// Folder routes
+router.get('/folders', authenticateToken, MediaController.getAllFolders);
+router.post('/folders', authenticateToken, MediaController.createFolder);
+router.get('/folders/:id', authenticateToken, MediaController.getFolderById);
+router.put('/folders/:id', authenticateToken, MediaController.updateFolder);
+router.delete('/folders/:id', authenticateToken, MediaController.deleteFolder);
+router.get('/folders/:id/files', authenticateToken, MediaController.getMediaByFolder);
 
 export default router; 
