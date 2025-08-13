@@ -1,0 +1,436 @@
+// =============================================
+// CONTENT MANAGEMENT MODELS
+// =============================================
+
+// Posts
+model Post {
+  id          String   @id @default(cuid())
+  title       String
+  slug        String   @unique
+  excerpt     String?
+  content     String
+  featuredImage String?
+  status      PostStatus @default(DRAFT)
+  publishedAt DateTime?
+  authorId    String
+  categoryId  String?
+  tags        Tag[]
+  isHidden    Boolean @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // SEO
+  metaTitle       String?
+  metaDescription String?
+  metaKeywords    String?
+  canonicalUrl    String?
+
+  // Relations
+  author   User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  category Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  comments Comment[]
+  likes    Like[]
+  views    PostView[]
+  commentThreads CommentThread[] @relation("PostCommentThreads")
+
+  @@map("posts")
+}
+
+// Categories
+model Category {
+  id          String @id @default(cuid())
+  name        String
+  slug        String @unique
+  description String?
+  color       String @default("#6b7280")
+  parentId    String?
+  isActive    Boolean @default(true)
+  sortOrder   Int @default(0)
+  metaTitle   String?
+  metaDescription String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  parent   Category?  @relation("CategoryParent", fields: [parentId], references: [id], onDelete: SetNull)
+  children Category[] @relation("CategoryParent")
+  posts    Post[]
+
+  @@map("categories")
+}
+
+// Tags
+model Tag {
+  id          String @id @default(cuid())
+  name        String
+  slug        String @unique
+  description String?
+  color       String @default("#6b7280")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  posts Post[]
+
+  @@map("tags")
+}
+
+// Comments (Legacy - keeping for backward compatibility)
+model Comment {
+  id        String   @id @default(cuid())
+  content   String
+  authorId  String
+  postId    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  author User @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  post   Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@map("comments")
+}
+
+// Enhanced Comments with threading
+model CommentThread {
+  id        String   @id @default(cuid())
+  parentId  String?
+  postId    String
+  authorId  String
+  content   String
+  status    String   @default("approved") // pending, approved, rejected, spam
+  depth     Int      @default(0)
+  path      String   // Materialized path for efficient queries
+  votes     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  parent    CommentThread?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies   CommentThread[] @relation("CommentReplies")
+  post      Post            @relation("PostCommentThreads", fields: [postId], references: [id], onDelete: Cascade)
+  author    User            @relation("AuthoredCommentThreads", fields: [authorId], references: [id], onDelete: Cascade)
+  votes_rel CommentVote[]
+
+  @@index([postId])
+  @@index([parentId])
+  @@index([path])
+  @@index([status])
+  @@map("comment_threads")
+}
+
+// Comment Votes
+model CommentVote {
+  id        String   @id @default(cuid())
+  commentId String
+  userId    String
+  voteType  String   // up, down
+  createdAt DateTime @default(now())
+
+  comment   CommentThread @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  user      User          @relation("CommentVotes", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([commentId, userId])
+  @@map("comment_votes")
+}
+
+// Likes
+model Like {
+  id        String   @id @default(cuid())
+  userId    String
+  postId    String
+  createdAt DateTime @default(now())
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, postId])
+  @@map("likes")
+}
+
+// Post Views
+model PostView {
+  id        String   @id @default(cuid())
+  postId    String
+  ipAddress String?
+  userAgent String?
+  viewedAt  DateTime @default(now())
+
+  // Relations
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@map("post_views")
+}
+
+// Content Workflows
+model ContentWorkflow {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  steps       Json     // Workflow steps configuration
+  isActive    Boolean  @default(true)
+  createdBy   String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  creator     User     @relation("CreatedWorkflows", fields: [createdBy], references: [id], onDelete: Cascade)
+  instances   WorkflowInstance[]
+
+  @@map("content_workflows")
+}
+
+// Workflow Instances
+model WorkflowInstance {
+  id          String   @id @default(cuid())
+  workflowId  String
+  contentId   String
+  contentType String   // post, page, etc.
+  currentStep Int      @default(0)
+  status      String   // pending, in_progress, completed, rejected
+  assignedTo  String?
+  data        Json?    // Instance-specific data
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  workflow    ContentWorkflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  assignee    User?           @relation("AssignedWorkflows", fields: [assignedTo], references: [id], onDelete: SetNull)
+  steps       WorkflowStep[]
+
+  @@index([workflowId])
+  @@index([contentId, contentType])
+  @@index([status])
+  @@map("workflow_instances")
+}
+
+// Workflow Steps
+model WorkflowStep {
+  id          String   @id @default(cuid())
+  instanceId  String
+  stepNumber  Int
+  name        String
+  status      String   // pending, in_progress, completed, rejected, skipped
+  assignedTo  String?
+  comments    String?
+  completedAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  instance    WorkflowInstance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+  assignee    User?            @relation("AssignedWorkflowSteps", fields: [assignedTo], references: [id], onDelete: SetNull)
+
+  @@unique([instanceId, stepNumber])
+  @@index([status])
+  @@map("workflow_steps")
+}
+
+// Content Revisions
+model ContentRevision {
+  id          String   @id @default(cuid())
+  contentId   String
+  contentType String   // post, page, etc.
+  version     Int
+  title       String?
+  content     String?
+  metadata    Json?
+  changes     Json?    // What changed in this revision
+  createdBy   String
+  createdAt   DateTime @default(now())
+
+  creator     User     @relation("CreatedRevisions", fields: [createdBy], references: [id], onDelete: Cascade)
+
+  @@unique([contentId, contentType, version])
+  @@index([contentId, contentType])
+  @@index([createdAt])
+  @@map("content_revisions")
+}
+
+// Content Locks (for editing conflicts)
+model ContentLock {
+  id          String   @id @default(cuid())
+  contentId   String
+  contentType String   // post, page, etc.
+  lockedBy    String
+  lockedAt    DateTime @default(now())
+  expiresAt   DateTime
+
+  user        User     @relation("ContentLocks", fields: [lockedBy], references: [id], onDelete: Cascade)
+
+  @@unique([contentId, contentType])
+  @@index([expiresAt])
+  @@map("content_locks")
+}
+
+// Content Templates
+model ContentTemplate {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  type        String   // post, page, email, etc.
+  template    Json     // Template structure/content
+  isActive    Boolean  @default(true)
+  createdBy   String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  creator     User     @relation("CreatedTemplates", fields: [createdBy], references: [id], onDelete: Cascade)
+
+  @@index([type])
+  @@index([isActive])
+  @@map("content_templates")
+}
+
+// Content Scheduling
+model ContentSchedule {
+  id          String   @id @default(cuid())
+  contentId   String
+  contentType String   // post, page, etc.
+  action      String   // publish, unpublish, delete
+  scheduledAt DateTime
+  status      String   // pending, executed, failed, cancelled
+  executedAt  DateTime?
+  error       String?
+  createdBy   String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  creator     User     @relation("CreatedSchedules", fields: [createdBy], references: [id], onDelete: Cascade)
+
+  @@unique([contentId, contentType, action])
+  @@index([scheduledAt])
+  @@index([status])
+  @@map("content_schedules")
+}
+
+// =============================================
+// CONTENT MODEL FOR EDITOR
+// =============================================
+
+// Generic Content Model for Editor
+model Content {
+  id        String   @id @default(cuid())
+  title     String
+  type      String   // post, page, template, etc.
+  content   Json     // Editor content data
+  authorId  String
+  status    String   @default("draft") // draft, published, archived
+  version   Int      @default(1)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  author    User     @relation("UserContent", fields: [authorId], references: [id], onDelete: Cascade)
+
+  // Editor relations
+  editorSessions      EditorSession[]      @relation("ContentEditorSessions")
+  autosavedContent    AutosavedContent[]   @relation("ContentAutosavedContent")
+  editorComments      EditorComment[]      @relation("ContentEditorComments")
+
+  @@index([authorId])
+  @@index([type])
+  @@index([status])
+  @@index([createdAt])
+  @@map("content")
+}
+
+// EDITOR SYSTEM MODELS
+// =============================================
+
+// Editor Sessions
+model EditorSession {
+  id            String   @id @default(cuid())
+  contentId     String   // Reference to Post, Page, or other content
+  contentType   String   // post, page, template, etc.
+  userId        String
+  sessionData   Json?    // Editor state, cursor position, etc.
+  lastActivity  DateTime @default(now())
+  expiresAt     DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  user          User     @relation("UserEditorSessions", fields: [userId], references: [id], onDelete: Cascade)
+  content       Content  @relation("ContentEditorSessions", fields: [contentId], references: [id], onDelete: Cascade)
+
+  @@index([contentId])
+  @@index([userId])
+  @@index([lastActivity])
+  @@map("editor_sessions")
+}
+
+// Auto-saved Content
+model AutosavedContent {
+  id            String   @id @default(cuid())
+  contentId     String   // Reference to Post, Page, or other content
+  userId        String
+  contentData   Json     // Editor content data
+  versionNumber Int
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  user          User     @relation("UserAutosavedContent", fields: [userId], references: [id], onDelete: Cascade)
+  content       Content  @relation("ContentAutosavedContent", fields: [contentId], references: [id], onDelete: Cascade)
+
+  @@unique([contentId, userId])
+  @@index([contentId])
+  @@index([userId])
+  @@map("autosaved_content")
+}
+
+// Editor Comments
+model EditorComment {
+  id           String   @id @default(cuid())
+  contentId    String   // Reference to Post, Page, or other content
+  userId       String
+  commentText  String
+  positionData Json?    // Comment position in content
+  resolved     Boolean  @default(false)
+  resolvedBy   String?
+  resolvedAt   DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  user         User     @relation("UserEditorComments", fields: [userId], references: [id], onDelete: Cascade)
+  resolver     User?    @relation("UserResolvedComments", fields: [resolvedBy], references: [id], onDelete: SetNull)
+  content      Content  @relation("ContentEditorComments", fields: [contentId], references: [id], onDelete: Cascade)
+
+  @@index([contentId])
+  @@index([userId])
+  @@index([resolved])
+  @@map("editor_comments")
+}
+
+// Block Usage Analytics
+model BlockUsageAnalytics {
+  id          String   @id @default(cuid())
+  blockType   String
+  userId      String?
+  contentId   String?
+  usageCount  Int      @default(1)
+  date        DateTime @db.Date
+  createdAt   DateTime @default(now())
+
+  // Relations
+  user        User?    @relation("UserBlockUsage", fields: [userId], references: [id], onDelete: SetNull)
+
+  @@unique([blockType, userId, date])
+  @@index([blockType])
+  @@index([date])
+  @@map("block_usage_analytics")
+}
+
+// Content Analysis Cache
+model ContentAnalysisCache {
+  id             String   @id @default(cuid())
+  contentHash    String
+  analysisType   String
+  analysisResult Json
+  expiresAt      DateTime?
+  createdAt      DateTime @default(now())
+
+  @@unique([contentHash, analysisType])
+  @@index([contentHash])
+  @@index([expiresAt])
+  @@map("content_analysis_cache")
+}

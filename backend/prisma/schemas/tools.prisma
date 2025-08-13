@@ -1,0 +1,244 @@
+// =============================================
+// TOOLS & UTILITIES MODELS
+// =============================================
+
+// Import/Export Jobs
+model ImportJob {
+  id          String   @id @default(cuid())
+  name        String
+  type        String   // posts, users, media, full_backup
+  source      String   // file, url, database
+  status      String   @default("pending") // pending, running, completed, failed, cancelled
+  progress    Int      @default(0) // 0-100
+  totalItems  Int      @default(0)
+  processedItems Int   @default(0)
+  successItems Int     @default(0)
+  failedItems Int      @default(0)
+  config      Json?    // Import configuration
+  mapping     Json?    // Field mappings
+  filePath    String?
+  results     Json?    // Import results/summary
+  error       String?
+  startedAt   DateTime?
+  completedAt DateTime?
+  createdBy   String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  creator     User     @relation("CreatedImportJobs", fields: [createdBy], references: [id], onDelete: Cascade)
+  logs        ImportLog[]
+
+  @@index([type])
+  @@index([status])
+  @@index([createdBy])
+  @@map("import_jobs")
+}
+
+// Export Jobs
+model ExportJob {
+  id          String   @id @default(cuid())
+  name        String
+  type        String   // posts, users, media, full_backup
+  format      String   // csv, json, xml, sql
+  status      String   @default("pending") // pending, running, completed, failed, cancelled
+  progress    Int      @default(0) // 0-100
+  totalItems  Int      @default(0)
+  processedItems Int   @default(0)
+  config      Json?    // Export configuration
+  filters     Json?    // Data filters
+  filePath    String?
+  fileSize    BigInt?
+  downloadUrl String?
+  expiresAt   DateTime?
+  error       String?
+  startedAt   DateTime?
+  completedAt DateTime?
+  createdBy   String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  creator     User     @relation("CreatedExportJobs", fields: [createdBy], references: [id], onDelete: Cascade)
+  logs        ExportLog[]
+
+  @@index([type])
+  @@index([status])
+  @@index([createdBy])
+  @@index([expiresAt])
+  @@map("export_jobs")
+}
+
+// Import Logs
+model ImportLog {
+  id          String   @id @default(cuid())
+  jobId       String
+  level       String   // info, warning, error
+  message     String
+  details     Json?
+  itemIndex   Int?     // Which item in the import batch
+  createdAt   DateTime @default(now())
+
+  // Relations
+  job         ImportJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@index([jobId])
+  @@index([level])
+  @@map("import_logs")
+}
+
+// Export Logs
+model ExportLog {
+  id          String   @id @default(cuid())
+  jobId       String
+  level       String   // info, warning, error
+  message     String
+  details     Json?
+  itemIndex   Int?     // Which item in the export batch
+  createdAt   DateTime @default(now())
+
+  // Relations
+  job         ExportJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@index([jobId])
+  @@index([level])
+  @@map("export_logs")
+}
+
+// Backup Jobs
+model BackupJob {
+  id          String   @id @default(cuid())
+  name        String
+  type        String   // full, incremental, database, files
+  status      String   @default("pending") // pending, running, completed, failed
+  progress    Int      @default(0) // 0-100
+  size        BigInt?  // Backup size in bytes
+  location    String?  // Backup file location
+  storageType String   // local, s3, google_cloud, etc.
+  compression String   @default("gzip") // none, gzip, bzip2
+  encryption  Boolean  @default(false)
+  config      Json?    // Backup configuration
+  checksum    String?  // File integrity checksum
+  error       String?
+  startedAt   DateTime?
+  completedAt DateTime?
+  expiresAt   DateTime? // When backup expires
+  createdBy   String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  creator     User     @relation("CreatedBackupJobs", fields: [createdBy], references: [id], onDelete: Cascade)
+  restores    RestoreJob[]
+
+  @@index([type])
+  @@index([status])
+  @@index([createdBy])
+  @@index([expiresAt])
+  @@map("backup_jobs")
+}
+
+// Restore Jobs
+model RestoreJob {
+  id          String   @id @default(cuid())
+  name        String
+  backupId    String
+  type        String   // full, selective
+  status      String   @default("pending") // pending, running, completed, failed
+  progress    Int      @default(0) // 0-100
+  config      Json?    // Restore configuration
+  selections  Json?    // What to restore (for selective restore)
+  error       String?
+  startedAt   DateTime?
+  completedAt DateTime?
+  createdBy   String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  backup      BackupJob @relation(fields: [backupId], references: [id], onDelete: Cascade)
+  creator     User      @relation("CreatedRestoreJobs", fields: [createdBy], references: [id], onDelete: Cascade)
+
+  @@index([backupId])
+  @@index([status])
+  @@index([createdBy])
+  @@map("restore_jobs")
+}
+
+// System Diagnostics
+model DiagnosticResult {
+  id          String   @id @default(cuid())
+  category    String   // system, database, security, performance
+  test        String   // Specific test name
+  status      String   // pass, fail, warning, info
+  message     String
+  details     Json?
+  metrics     Json?    // Performance metrics, if applicable
+  suggestions Json?    // Suggested fixes
+  severity    String   @default("info") // info, low, medium, high, critical
+  executedAt  DateTime @default(now())
+  executedBy  String?
+
+  // Relations
+  executor    User?    @relation("ExecutedDiagnostics", fields: [executedBy], references: [id], onDelete: SetNull)
+
+  @@index([category])
+  @@index([status])
+  @@index([severity])
+  @@index([executedAt])
+  @@map("diagnostic_results")
+}
+
+// Maintenance Tasks
+model MaintenanceTask {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  type        String   // cleanup, optimization, update, backup
+  schedule    String?  // Cron expression for scheduled tasks
+  status      String   @default("pending") // pending, running, completed, failed, scheduled
+  priority    String   @default("normal") // low, normal, high, urgent
+  config      Json?    // Task configuration
+  lastRun     DateTime?
+  nextRun     DateTime?
+  runCount    Int      @default(0)
+  successCount Int     @default(0)
+  failureCount Int     @default(0)
+  avgDuration Int?     // Average execution time in seconds
+  isActive    Boolean  @default(true)
+  createdBy   String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  creator     User     @relation("CreatedMaintenanceTasks", fields: [createdBy], references: [id], onDelete: Cascade)
+  executions  MaintenanceExecution[]
+
+  @@index([type])
+  @@index([status])
+  @@index([nextRun])
+  @@index([isActive])
+  @@map("maintenance_tasks")
+}
+
+// Maintenance Executions
+model MaintenanceExecution {
+  id          String   @id @default(cuid())
+  taskId      String
+  status      String   @default("running") // running, completed, failed
+  startedAt   DateTime @default(now())
+  completedAt DateTime?
+  duration    Int?     // Execution time in seconds
+  output      String?  // Task output/logs
+  error       String?
+  triggeredBy String?  // manual, scheduled, system
+
+  // Relations
+  task        MaintenanceTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  trigger     User?           @relation("TriggeredMaintenanceExecutions", fields: [triggeredBy], references: [id], onDelete: SetNull)
+
+  @@index([taskId])
+  @@index([status])
+  @@index([startedAt])
+  @@map("maintenance_executions")
+}

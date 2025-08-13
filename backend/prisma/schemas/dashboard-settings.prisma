@@ -1,0 +1,145 @@
+// =============================================
+// DASHBOARD SETTINGS MODEL (Prisma)
+// =============================================
+
+// Dashboard Settings untuk user preferences
+model DashboardSettings {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  
+  // General Settings
+  layoutMode String  @default("default") // 'default' | 'custom'
+  autoRefresh Boolean @default(false)
+  autoRefreshInterval Int @default(5) // in minutes
+  notifications Boolean @default(true)
+  
+  // Widget Settings (stored as JSON)
+  widgets Json @default({
+    "quickActions": {
+      "enabled": true,
+      "maxActions": 8,
+      "showIcons": true
+    },
+    "recentActivity": {
+      "enabled": true,
+      "maxItems": 8,
+      "showUserAvatars": true,
+      "showTimestamps": true
+    },
+    "analyticsChart": {
+      "enabled": true,
+      "defaultMetric": "overview",
+      "timeRange": "30d",
+      "chartType": "area"
+    },
+    "statsCards": {
+      "enabled": true,
+      "showSystemHealth": true,
+      "showSecurityStatus": true,
+      "layout": "grid"
+    }
+  })
+  
+  // Layout Settings
+  layout Json @default({
+    "gridColumns": 3,
+    "widgetSpacing": "normal"
+  })
+  
+  // Appearance Settings
+  appearance Json @default({
+    "theme": "system",
+    "cardStyle": "flat"
+  })
+  
+  // Data Settings
+  data Json @default({
+    "retentionPeriod": 24,
+    "cacheEnabled": true
+  })
+  
+  // Grid Layout (for custom mode)
+  gridLayout Json?
+  
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  user User @relation("UserDashboardSettings", fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// Types untuk TypeScript
+export interface DashboardSettingsData {
+  id?: string;
+  userId: string;
+  layoutMode: 'default' | 'custom';
+  autoRefresh: boolean;
+  autoRefreshInterval: number;
+  notifications: boolean;
+  widgets: {
+    quickActions: {
+      enabled: boolean;
+      maxActions: number;
+      showIcons: boolean;
+    };
+    recentActivity: {
+      enabled: boolean;
+      maxItems: number;
+      showUserAvatars: boolean;
+      showTimestamps: boolean;
+    };
+    analyticsChart: {
+      enabled: boolean;
+      defaultMetric: string;
+      timeRange: string;
+      chartType: 'area' | 'line' | 'bar';
+    };
+    statsCards: {
+      enabled: boolean;
+      showSystemHealth: boolean;
+      showSecurityStatus: boolean;
+      layout: 'grid' | 'list';
+    };
+  };
+  layout: {
+    gridColumns: number;
+    widgetSpacing: 'compact' | 'normal' | 'spacious';
+  };
+  appearance: {
+    theme: 'light' | 'dark' | 'system';
+    cardStyle: 'flat' | 'elevated' | 'bordered';
+  };
+  data: {
+    retentionPeriod: number;
+    cacheEnabled: boolean;
+  };
+  gridLayout?: any;
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
+export interface CreateDashboardSettings {
+  userId: string;
+  layoutMode?: 'default' | 'custom';
+  autoRefresh?: boolean;
+  autoRefreshInterval?: number;
+  notifications?: boolean;
+  widgets?: any;
+  layout?: any;
+  appearance?: any;
+  data?: any;
+  gridLayout?: any;
+}
+
+export interface UpdateDashboardSettings {
+  layoutMode?: 'default' | 'custom';
+  autoRefresh?: boolean;
+  autoRefreshInterval?: number;
+  notifications?: boolean;
+  widgets?: any;
+  layout?: any;
+  appearance?: any;
+  data?: any;
+  gridLayout?: any;
+}
