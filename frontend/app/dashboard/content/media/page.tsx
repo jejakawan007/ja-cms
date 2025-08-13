@@ -21,11 +21,14 @@ import {
   MoreHorizontal,
   Upload,
   FolderPlus,
-  Plus
+  ChevronRight,
+  Folder,
+  FolderOpen,
+  Home,
+  Settings
 } from 'lucide-react';
 import { MediaPicker } from '@/components/media/MediaPicker';
 import { BulkOperations } from '@/components/media/BulkOperations';
-import { FolderManager } from '@/components/media/FolderManager';
 import { MediaUpload } from '@/components/media/MediaUpload';
 import {
   Dialog,
@@ -35,6 +38,11 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
 import { cn } from '@/lib/cn';
 
 interface MediaFile {
@@ -71,21 +79,78 @@ export default function MediaExplorerPage() {
   const [mediaFiles, setMediaFiles] = useState<MediaFile[]>([]);
   const [selectedFiles, setSelectedFiles] = useState<MediaFile[]>([]);
   const [currentFolder, setCurrentFolder] = useState<MediaFolder | null>(null);
+  const [folderPath, setFolderPath] = useState<MediaFolder[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedType, setSelectedType] = useState<string>('all');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [isLoading, setIsLoading] = useState(false);
   const [showUploadDialog, setShowUploadDialog] = useState(false);
+  const [showFolderDialog, setShowFolderDialog] = useState(false);
+  const [newFolderName, setNewFolderName] = useState('');
+  const [folders, setFolders] = useState<MediaFolder[]>([]);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
-  // Load media files
+  // Load folders and media files
   useEffect(() => {
+    loadFolders();
     loadMediaFiles();
   }, [currentFolder]);
+
+  const loadFolders = async () => {
+    try {
+      // TODO: Replace with real API call
+      const mockFolders: MediaFolder[] = [
+        {
+          id: '1',
+          name: 'Hero Images',
+          path: '/hero-images',
+          fileCount: 24,
+          totalSize: 156 * 1024 * 1024, // 156 MB
+          createdAt: '2024-01-01T00:00:00Z',
+          updatedAt: '2024-01-15T10:30:00Z',
+          children: [
+            {
+              id: '1-1',
+              name: 'Landing Page',
+              path: '/hero-images/landing-page',
+              parentId: '1',
+              fileCount: 8,
+              totalSize: 45 * 1024 * 1024,
+              createdAt: '2024-01-05T00:00:00Z',
+              updatedAt: '2024-01-12T15:20:00Z'
+            }
+          ]
+        },
+        {
+          id: '2',
+          name: 'Product Photos',
+          path: '/product-photos',
+          fileCount: 156,
+          totalSize: 2.1 * 1024 * 1024 * 1024, // 2.1 GB
+          createdAt: '2024-01-01T00:00:00Z',
+          updatedAt: '2024-01-14T16:45:00Z'
+        },
+        {
+          id: '3',
+          name: 'Documents',
+          path: '/documents',
+          fileCount: 89,
+          totalSize: 234 * 1024 * 1024, // 234 MB
+          createdAt: '2024-01-01T00:00:00Z',
+          updatedAt: '2024-01-13T09:15:00Z'
+        }
+      ];
+
+      setFolders(mockFolders);
+    } catch (error) {
+      console.error('Failed to load folders:', error);
+    }
+  };
 
   const loadMediaFiles = async () => {
     setIsLoading(true);
     try {
-      // TODO: Replace with real API call
+      // TODO: Replace with real API call - filter by currentFolder
       const mockFiles: MediaFile[] = [
         {
           id: '1',
@@ -98,6 +163,7 @@ export default function MediaExplorerPage() {
           description: 'Main hero image for homepage',
           uploadedBy: 'John Doe',
           createdAt: '2024-01-15T10:30:00Z',
+          folderId: currentFolder?.id,
           dimensions: { width: 1920, height: 1080 }
         },
         {
@@ -108,7 +174,8 @@ export default function MediaExplorerPage() {
           size: 2048000,
           url: '/api/media/2',
           uploadedBy: 'Sarah Wilson',
-          createdAt: '2024-01-14T14:20:00Z'
+          createdAt: '2024-01-14T14:20:00Z',
+          folderId: currentFolder?.id
         },
         {
           id: '3',
@@ -119,7 +186,8 @@ export default function MediaExplorerPage() {
           url: '/api/media/3',
           description: 'Product demonstration video',
           uploadedBy: 'Mike Johnson',
-          createdAt: '2024-01-13T16:45:00Z'
+          createdAt: '2024-01-13T16:45:00Z',
+          folderId: currentFolder?.id
         }
       ];
 
@@ -129,6 +197,35 @@ export default function MediaExplorerPage() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const updateFolderPath = (folder: MediaFolder | null) => {
+    if (!folder) {
+      setFolderPath([]);
+      return;
+    }
+    
+    const path: MediaFolder[] = [];
+    let current = folder;
+    
+    // Build path from root to current folder
+    while (current) {
+      path.unshift(current);
+      const parent = folders.find(f => f.id === current.parentId);
+      current = parent || null;
+    }
+    
+    setFolderPath(path);
+  };
+
+  const handleFolderSelect = (folder: MediaFolder) => {
+    setCurrentFolder(folder);
+    updateFolderPath(folder);
+  };
+
+  const handleBreadcrumbClick = (folder: MediaFolder) => {
+    setCurrentFolder(folder);
+    updateFolderPath(folder);
   };
 
   const handleFileSelect = (file: MediaFile) => {
@@ -164,6 +261,20 @@ export default function MediaExplorerPage() {
     console.log('Upload completed:', files);
     setShowUploadDialog(false);
     loadMediaFiles();
+  };
+
+  const handleCreateFolder = async () => {
+    if (!newFolderName.trim()) return;
+
+    try {
+      // TODO: Replace with real API call
+      console.log('Creating folder:', newFolderName, 'in:', currentFolder?.id);
+      setNewFolderName('');
+      setShowFolderDialog(false);
+      loadFolders();
+    } catch (error) {
+      console.error('Failed to create folder:', error);
+    }
   };
 
   const getFileIcon = (mimeType: string) => {
@@ -209,6 +320,42 @@ export default function MediaExplorerPage() {
     const matchesType = selectedType === 'all' || getFileType(file.mimeType).toLowerCase() === selectedType.toLowerCase();
     return matchesSearch && matchesType;
   });
+
+  const renderFolderTree = (folderList: MediaFolder[], level: number = 0) => {
+    return folderList.map(folder => (
+      <div key={folder.id} className="space-y-1">
+        <div
+          className={cn(
+            "flex items-center justify-between p-2 rounded-lg cursor-pointer transition-colors text-sm",
+            currentFolder?.id === folder.id 
+              ? "bg-primary/10 text-primary" 
+              : "hover:bg-muted/50"
+          )}
+          onClick={() => handleFolderSelect(folder)}
+        >
+          <div className="flex items-center gap-2 flex-1 min-w-0">
+            <div style={{ marginLeft: `${level * 12}px` }} />
+            {folder.children && folder.children.length > 0 ? (
+              <FolderOpen className="h-4 w-4 flex-shrink-0" />
+            ) : (
+              <Folder className="h-4 w-4 flex-shrink-0" />
+            )}
+            <span className="truncate">{folder.name}</span>
+          </div>
+          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+            <span>{folder.fileCount}</span>
+          </div>
+        </div>
+        
+        {/* Render children */}
+        {folder.children && folder.children.length > 0 && (
+          <div className="ml-2">
+            {renderFolderTree(folder.children, level + 1)}
+          </div>
+        )}
+      </div>
+    ));
+  };
 
   const renderGridView = () => (
     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
@@ -354,172 +501,241 @@ export default function MediaExplorerPage() {
   );
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Media Explorer</h1>
-          <p className="text-muted-foreground">
-            {currentFolder ? `In ${currentFolder.name}` : 'All media files'}
-          </p>
+    <div className="flex h-full">
+      {/* Sidebar */}
+      <div className={cn(
+        "border-r bg-background transition-all duration-300",
+        sidebarCollapsed ? "w-16" : "w-64"
+      )}>
+        <div className="p-4 border-b">
+          <div className="flex items-center justify-between">
+            {!sidebarCollapsed && <h3 className="font-semibold">Folders</h3>}
+            <div className="flex items-center gap-1">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowFolderDialog(true)}
+                className={cn(sidebarCollapsed && "w-8 h-8 p-0")}
+              >
+                <FolderPlus className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                className={cn(sidebarCollapsed && "w-8 h-8 p-0")}
+              >
+                <Settings className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
         </div>
-        <div className="flex items-center space-x-2">
-          <MediaPicker
-            onSelect={(files) => console.log('Selected files:', files)}
-            trigger={
-              <Button variant="outline">
-                <Image className="h-4 w-4 mr-2" />
-                Select Media
-              </Button>
-            }
-          />
-          
-          {/* Upload Dialog */}
-          <Dialog open={showUploadDialog} onOpenChange={setShowUploadDialog}>
-            <DialogTrigger asChild>
-              <Button>
-                <Upload className="h-4 w-4 mr-2" />
-                Upload Files
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-2xl">
-              <DialogHeader>
-                <DialogTitle>Upload Media Files</DialogTitle>
-                <DialogDescription>
-                  Upload and organize your media files. Drag and drop files here or click to browse.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="py-4">
-                <MediaUpload 
-                  onUploadComplete={handleUploadComplete}
-                  multiple={true}
-                  maxFiles={20}
-                  maxSize={50 * 1024 * 1024} // 50MB
-                />
-              </div>
-            </DialogContent>
-          </Dialog>
+        
+        <div className="p-2">
+          {!sidebarCollapsed && renderFolderTree(folders)}
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        {/* Folder Manager Sidebar */}
-        <div className="lg:col-span-1">
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-lg">Folders</CardTitle>
-                <Button variant="ghost" size="sm">
-                  <FolderPlus className="h-4 w-4" />
+      {/* Main Content */}
+      <div className="flex-1 flex flex-col">
+        {/* Header */}
+        <div className="p-6 border-b">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight">Media Explorer</h1>
+              {/* Breadcrumb */}
+              <div className="flex items-center gap-2 mt-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setCurrentFolder(null);
+                    setFolderPath([]);
+                  }}
+                  className="h-6 px-2"
+                >
+                  <Home className="h-3 w-3 mr-1" />
+                  Home
                 </Button>
+                {folderPath.map((folder, index) => (
+                  <div key={folder.id} className="flex items-center gap-2">
+                    <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleBreadcrumbClick(folder)}
+                      className="h-6 px-2"
+                    >
+                      {folder.name}
+                    </Button>
+                  </div>
+                ))}
               </div>
-            </CardHeader>
-            <CardContent>
-              <FolderManager
-                currentFolder={currentFolder}
-                onFolderSelect={setCurrentFolder}
+            </div>
+            
+            <div className="flex items-center space-x-2">
+              <MediaPicker
+                onSelect={(files) => console.log('Selected files:', files)}
+                trigger={
+                  <Button variant="outline">
+                    <Image className="h-4 w-4 mr-2" />
+                    Select Media
+                  </Button>
+                }
               />
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Main Content */}
-        <div className="lg:col-span-3 space-y-6">
-          {/* Search and Filters */}
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex flex-col sm:flex-row gap-4">
-                <div className="flex-1">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      placeholder="Search files..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-10"
+              
+              {/* Upload Dialog */}
+              <Dialog open={showUploadDialog} onOpenChange={setShowUploadDialog}>
+                <DialogTrigger asChild>
+                  <Button>
+                    <Upload className="h-4 w-4 mr-2" />
+                    Upload Files
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-2xl">
+                  <DialogHeader>
+                    <DialogTitle>Upload Media Files</DialogTitle>
+                    <DialogDescription>
+                      Upload and organize your media files. Drag and drop files here or click to browse.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="py-4">
+                    <MediaUpload 
+                      onUploadComplete={handleUploadComplete}
+                      multiple={true}
+                      maxFiles={20}
+                      maxSize={50 * 1024 * 1024} // 50MB
                     />
                   </div>
-                </div>
-                <div className="flex gap-2">
-                  <Button
-                    variant={selectedType === 'all' ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setSelectedType('all')}
-                  >
-                    All
-                  </Button>
-                  <Button
-                    variant={selectedType === 'image' ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setSelectedType('image')}
-                  >
-                    Images
-                  </Button>
-                  <Button
-                    variant={selectedType === 'video' ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setSelectedType('video')}
-                  >
-                    Videos
-                  </Button>
-                  <Button
-                    variant={selectedType === 'document' ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setSelectedType('document')}
-                  >
-                    Documents
-                  </Button>
-                </div>
-                <div className="flex gap-1">
-                  <Button
-                    variant={viewMode === 'grid' ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setViewMode('grid')}
-                  >
-                    <Grid3X3 className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant={viewMode === 'list' ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setViewMode('list')}
-                  >
-                    <List className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+                </DialogContent>
+              </Dialog>
+            </div>
+          </div>
 
-          {/* Media Files */}
+          {/* Search and Filters */}
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="flex-1">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search files..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant={selectedType === 'all' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setSelectedType('all')}
+              >
+                All
+              </Button>
+              <Button
+                variant={selectedType === 'image' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setSelectedType('image')}
+              >
+                Images
+              </Button>
+              <Button
+                variant={selectedType === 'video' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setSelectedType('video')}
+              >
+                Videos
+              </Button>
+              <Button
+                variant={selectedType === 'document' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setSelectedType('document')}
+              >
+                Documents
+              </Button>
+            </div>
+            <div className="flex gap-1">
+              <Button
+                variant={viewMode === 'grid' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setViewMode('grid')}
+              >
+                <Grid3X3 className="h-4 w-4" />
+              </Button>
+              <Button
+                variant={viewMode === 'list' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setViewMode('list')}
+              >
+                <List className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        {/* Content Area */}
+        <div className="flex-1 p-6 overflow-auto">
           {isLoading ? (
-            <Card>
-              <CardContent className="p-12 text-center">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-              </CardContent>
-            </Card>
+            <div className="flex items-center justify-center h-full">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            </div>
           ) : filteredFiles.length > 0 ? (
             viewMode === 'grid' ? renderGridView() : renderListView()
           ) : (
-            <Card>
-              <CardContent className="p-12 text-center">
-                <div className="space-y-4">
-                  <div className="text-muted-foreground">
-                    <Image className="h-12 w-12 mx-auto mb-4" />
-                  </div>
-                  <h3 className="text-lg font-semibold">No files found</h3>
-                  <p className="text-muted-foreground">
-                    Try adjusting your search or filter criteria
-                  </p>
-                  <Button onClick={() => setShowUploadDialog(true)}>
-                    <Upload className="h-4 w-4 mr-2" />
-                    Upload your first file
-                  </Button>
+            <div className="flex items-center justify-center h-full">
+              <div className="text-center space-y-4">
+                <div className="text-muted-foreground">
+                  <Image className="h-12 w-12 mx-auto mb-4" />
                 </div>
-              </CardContent>
-            </Card>
+                <h3 className="text-lg font-semibold">No files found</h3>
+                <p className="text-muted-foreground">
+                  {currentFolder 
+                    ? `No files in "${currentFolder.name}"` 
+                    : 'Try adjusting your search or filter criteria'
+                  }
+                </p>
+                <Button onClick={() => setShowUploadDialog(true)}>
+                  <Upload className="h-4 w-4 mr-2" />
+                  Upload your first file
+                </Button>
+              </div>
+            </div>
           )}
         </div>
       </div>
+
+      {/* Create Folder Dialog */}
+      <Dialog open={showFolderDialog} onOpenChange={setShowFolderDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Create New Folder</DialogTitle>
+            <DialogDescription>
+              Create a new folder to organize your media files.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <Input
+              placeholder="Folder name..."
+              value={newFolderName}
+              onChange={(e) => setNewFolderName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  handleCreateFolder();
+                }
+              }}
+            />
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setShowFolderDialog(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleCreateFolder}>
+                Create Folder
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Bulk Operations */}
       <BulkOperations
