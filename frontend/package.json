@@ -23,6 +23,7 @@
     "npm": ">=9.0.0"
   },
   "dependencies": {
+    "dompurify": "^3.2.6",
     "react-grid-layout": "^1.5.2"
   },
   "devDependencies": {
