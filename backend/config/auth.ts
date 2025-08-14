@@ -2,6 +2,7 @@
 // Menggunakan shared config
 
 import { AUTH_CONFIG } from '@shared/config';
+import jwt from 'jsonwebtoken';
 
 export interface AuthConfig {
   jwtSecret: string;
@@ -46,8 +47,9 @@ import { validatePassword as sharedValidatePassword } from '@shared/utils';
 // Token validation (backend-specific)
 export const validateToken = (token: string): boolean => {
   try {
-    const payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString());
-    return payload.exp * 1000 > Date.now();
+    const config = getAuthConfig();
+    jwt.verify(token, config.jwtSecret);
+    return true;
   } catch {
     return false;
   }
@@ -55,8 +57,9 @@ export const validateToken = (token: string): boolean => {
 
 export const decodeToken = (token: string): JWTPayload | null => {
   try {
-    const payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString());
-    return payload;
+    const config = getAuthConfig();
+    const decoded = jwt.verify(token, config.jwtSecret);
+    return decoded as JWTPayload;
   } catch {
     return null;
   }

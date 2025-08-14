@@ -81,15 +81,12 @@ export class AuthService {
       return false;
     }
 
-    // For now, we'll use a simple password check
-    // In production, this should use bcrypt.compare()
     const userWithPassword = await this.userModel.findByEmailWithPassword(user.email);
     if (!userWithPassword) {
       return false;
     }
 
-    // Simple password comparison (replace with bcrypt in production)
-    return userWithPassword.password === password;
+    return await bcrypt.compare(password, userWithPassword.password);
   }
 
   // Get user permissions

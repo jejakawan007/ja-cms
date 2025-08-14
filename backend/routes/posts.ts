@@ -1,7 +1,8 @@
 import { Router, Request, Response } from 'express';
 import { z } from 'zod';
-import { PrismaClient, PostStatus } from '@prisma/client';
+import { PrismaClient } from '@prisma/client';
 import { asyncHandler } from '@/middleware/error-handler';
+import { PostStatus } from '@shared/types';
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -283,7 +284,7 @@ router.post('/', asyncHandler(async (req: Request, res: Response) => {
 
   // TODO: Get current user from auth middleware
   const authorId = 'cme03g5fc0000enkd08xi5kk4'; // Admin user ID from database
-
+  
   // Prepare data for Prisma
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const postData: any = {

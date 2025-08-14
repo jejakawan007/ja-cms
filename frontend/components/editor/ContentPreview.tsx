@@ -19,6 +19,7 @@ import {
   Printer
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
+import DOMPurify from 'dompurify'
 
 interface ContentPreviewProps {
   content: string
@@ -222,7 +223,7 @@ export function ContentPreview({
                   <div 
                     className="prose prose-sm max-w-none"
                     dangerouslySetInnerHTML={{ 
-                      __html: renderMarkdown(content) 
+                      __html: DOMPurify.sanitize(renderMarkdown(content), { ALLOWED_TAGS: ['h1','h2','h3','p','strong','em','del','code','pre','a','img','blockquote','li','ol','ul','table','tr','td','hr','br','span'], ALLOWED_ATTR: ['class','href','alt','target','rel'] }) 
                     }}
                   />
                 </div>
