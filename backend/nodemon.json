@@ -1,9 +1,0 @@
-{
-  "watch": ["."],
-  "ext": "ts,js,json",
-  "ignore": ["**/*.spec.ts", "**/*.test.ts", "dist", "node_modules"],
-  "exec": "ts-node -r tsconfig-paths/register app.ts",
-  "env": {
-    "NODE_ENV": "development"
-  }
-} 
