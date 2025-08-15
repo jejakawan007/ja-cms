@@ -1,0 +1,195 @@
+// =============================================
+// MEDIA MANAGEMENT MODELS
+// =============================================
+
+// Enhanced Media model (extending the basic one in system.prisma)
+model MediaFile {
+  id              String   @id @default(cuid())
+  filename        String
+  originalName    String
+  mimeType        String
+  size            Int
+  width           Int?
+  height          Int?
+  duration        Int?     // for video/audio files
+  url             String
+  thumbnailUrl    String?
+  alt             String?
+  caption         String?
+  description     String?
+  folderId        String?
+  uploadedBy      String
+  processingStatus String  @default("pending") // pending, processing, completed, failed
+  metadata        Json?    // EXIF data, video info, etc.
+  tags            MediaTag[]
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  folder          MediaFolder?      @relation(fields: [folderId], references: [id], onDelete: SetNull)
+  uploader        User              @relation("UploadedMediaFiles", fields: [uploadedBy], references: [id], onDelete: Cascade)
+  processingJobs  MediaProcessingJob[]
+  cdnCache        MediaCdnCache[]
+  analytics       MediaAnalytics[]  @relation("MediaAnalyticsData")
+  searchIndex     MediaSearchIndex? @relation("MediaSearchData")
+
+  @@index([folderId])
+  @@index([mimeType])
+  @@index([uploadedBy])
+  @@index([processingStatus])
+  @@map("media_files")
+}
+
+// Media Folders
+model MediaFolder {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String
+  description String?
+  parentId    String?
+  path        String   // Full path for efficient queries
+  isPublic    Boolean  @default(false)
+  permissions Json?    // Folder-specific permissions
+  createdBy   String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  parent      MediaFolder?  @relation("FolderHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
+  children    MediaFolder[] @relation("FolderHierarchy")
+  files       MediaFile[]
+  creator     User          @relation("CreatedMediaFolders", fields: [createdBy], references: [id], onDelete: Cascade)
+  uploadSessions MediaUploadSession[] @relation("FolderUploadSessions")
+
+  @@unique([parentId, slug])
+  @@index([path])
+  @@index([createdBy])
+  @@map("media_folders")
+}
+
+// Media Tags
+model MediaTag {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  slug        String   @unique
+  color       String   @default("#6b7280")
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  files       MediaFile[]
+
+  @@map("media_tags")
+}
+
+// Media Processing Jobs
+model MediaProcessingJob {
+  id          String   @id @default(cuid())
+  mediaId     String
+  type        String   // resize, compress, convert, thumbnail, watermark
+  status      String   @default("pending") // pending, processing, completed, failed
+  parameters  Json     // Processing parameters
+  inputPath   String
+  outputPath  String?
+  progress    Int      @default(0) // 0-100
+  startedAt   DateTime?
+  completedAt DateTime?
+  error       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  media       MediaFile @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+
+  @@index([mediaId])
+  @@index([status])
+  @@index([type])
+  @@map("media_processing_jobs")
+}
+
+// CDN Cache Management
+model MediaCdnCache {
+  id          String   @id @default(cuid())
+  mediaId     String
+  cdnUrl      String
+  region      String
+  size        Int
+  hits        Int      @default(0)
+  lastHit     DateTime?
+  expiresAt   DateTime?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  media       MediaFile @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+
+  @@unique([mediaId, region])
+  @@index([expiresAt])
+  @@index([isActive])
+  @@map("media_cdn_cache")
+}
+
+// Media Analytics
+model MediaAnalytics {
+  id          String   @id @default(cuid())
+  mediaId     String
+  date        DateTime @db.Date
+  views       Int      @default(0)
+  downloads   Int      @default(0)
+  bandwidth   BigInt   @default(0) // bytes
+  uniqueViews Int      @default(0)
+  referrers   Json?    // Top referrer URLs
+  countries   Json?    // Geographic data
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  media       MediaFile @relation("MediaAnalyticsData", fields: [mediaId], references: [id], onDelete: Cascade)
+
+  @@unique([mediaId, date])
+  @@index([date])
+  @@map("media_analytics")
+}
+
+// Media Upload Sessions
+model MediaUploadSession {
+  id          String   @id @default(cuid())
+  sessionId   String   @unique
+  userId      String
+  totalFiles  Int
+  uploadedFiles Int    @default(0)
+  totalSize   BigInt
+  uploadedSize BigInt  @default(0)
+  status      String   @default("active") // active, completed, failed, cancelled
+  folderId    String?
+  metadata    Json?
+  startedAt   DateTime @default(now())
+  completedAt DateTime?
+  expiresAt   DateTime
+
+  // Relations
+  user        User        @relation("MediaUploadSessions", fields: [userId], references: [id], onDelete: Cascade)
+  folder      MediaFolder? @relation("FolderUploadSessions", fields: [folderId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([status])
+  @@index([expiresAt])
+  @@map("media_upload_sessions")
+}
+
+// Media Search Index (for advanced search)
+model MediaSearchIndex {
+  id          String   @id @default(cuid())
+  mediaId     String   @unique
+  searchText  String   // Concatenated searchable text
+  keywords    String[] // Extracted keywords
+  lastIndexed DateTime @default(now())
+
+  // Relations
+  media       MediaFile @relation("MediaSearchData", fields: [mediaId], references: [id], onDelete: Cascade)
+
+  @@index([keywords])
+  @@map("media_search_index")
+}

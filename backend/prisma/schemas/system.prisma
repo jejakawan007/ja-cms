@@ -1,0 +1,133 @@
+// =============================================
+// SYSTEM MODELS
+// =============================================
+
+// Media Management
+model Media {
+  id           String   @id @default(cuid())
+  filename     String
+  originalName String
+  mimeType     String
+  size         Int
+  url          String
+  alt          String?
+  caption      String?
+  uploadedBy   String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  uploader User @relation(fields: [uploadedBy], references: [id], onDelete: Cascade)
+
+  @@map("media")
+}
+
+// Menu Management
+model Menu {
+  id        String     @id @default(cuid())
+  name      String
+  location  String
+  isActive  Boolean    @default(true)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  // Relations
+  items MenuItem[]
+
+  @@map("menus")
+}
+
+model MenuItem {
+  id        String      @id @default(cuid())
+  menuId    String
+  parentId  String?
+  title     String
+  url       String?
+  target    String      @default("_self")
+  cssClass  String?
+  order     Int         @default(0)
+  isActive  Boolean     @default(true)
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  // Relations
+  menu     Menu        @relation(fields: [menuId], references: [id], onDelete: Cascade)
+  parent   MenuItem?   @relation("MenuItemParent", fields: [parentId], references: [id], onDelete: Cascade)
+  children MenuItem[]  @relation("MenuItemParent")
+
+  @@map("menu_items")
+}
+
+// Settings
+model Setting {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String
+  type      String   @default("string") // string, number, boolean, json
+  category  String   @default("general")
+  isPublic  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("settings")
+}
+
+// Notifications
+model Notification {
+  id        String   @id @default(cuid())
+  title     String
+  message   String
+  type      String   @default("info") // info, success, warning, error
+  isRead    Boolean  @default(false)
+  userId    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  user User? @relation("UserNotifications", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([isRead])
+  @@map("notifications")
+}
+
+// Audit Logs
+model AuditLog {
+  id        String   @id @default(cuid())
+  action    String
+  resource  String
+  resourceId String?
+  userId    String?
+  ipAddress String?
+  userAgent String?
+  changes   Json?
+  createdAt DateTime @default(now())
+
+  // Relations
+  user User? @relation("UserAuditLogs", fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([action])
+  @@index([resource])
+  @@index([userId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+// Themes
+model Theme {
+  id           String   @id @default(cuid())
+  name         String
+  description  String?
+  category     String   @default("dashboard")
+  isActive     Boolean  @default(false)
+  isDefault    Boolean  @default(false)
+  colors       Json     // Stored as JSON string
+  typography   Json     // Stored as JSON string
+  spacing      Json     // Stored as JSON string
+  borderRadius Json     // Stored as JSON string
+  metadata     Json?    // Optional metadata
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("themes")
+}

@@ -1,0 +1,45 @@
+{
+  "name": "ja-cms-backend",
+  "version": "1.0.0",
+  "description": "Backend API untuk JA-CMS dengan Express.js + TypeScript + Prisma",
+  "main": "dist/app.js",
+  "scripts": {
+    "dev": "nodemon app.ts",
+    "build": "tsc",
+    "start": "node dist/app.js",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "lint": "eslint . --ext .ts",
+    "lint:fix": "eslint . --ext .ts --fix",
+    "format": "prettier --write . --ext .ts",
+    "db:generate": "prisma generate",
+    "db:push": "prisma db push",
+    "db:migrate": "prisma migrate dev",
+    "db:migrate:deploy": "prisma migrate deploy",
+    "db:reset": "prisma migrate reset",
+    "db:seed": "ts-node prisma/seed.ts",
+    "db:studio": "prisma studio",
+    "db:setup": "npm run db:generate && npm run db:migrate && npm run db:seed",
+    "schema:merge": "node prisma/scripts/merge-schemas.js",
+    "schema:validate": "npm run schema:merge && npx prisma validate",
+    "db:reset:full": "npm run schema:merge && npm run db:reset"
+  },
+  "prisma": {
+    "seed": "ts-node prisma/seed.ts"
+  },
+  "keywords": [
+    "express",
+    "typescript",
+    "prisma",
+    "postgresql",
+    "api",
+    "cms"
+  ],
+  "author": "JA-CMS Team",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  }
+}
